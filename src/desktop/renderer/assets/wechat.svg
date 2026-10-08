@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="微信">
+  <rect width="64" height="64" rx="18" fill="#24c765"/>
+  <path d="M28 16c-9 0-16 6-16 13 0 4 2 7 6 10l-2 6 7-3c2 1 4 1 6 1 9 0 16-6 16-14S37 16 28 16Z" fill="#fff"/>
+  <path d="M39 28c7 0 13 5 13 11 0 3-2 6-5 8l2 5-6-3h-4c-7 0-13-5-13-11 0-6 6-10 13-10Z" fill="#dcffe7" stroke="#24c765" stroke-width="1.5"/>
+  <circle cx="23" cy="27" r="2" fill="#24a856"/><circle cx="34" cy="27" r="2" fill="#24a856"/><circle cx="35" cy="37" r="1.7" fill="#24a856"/><circle cx="44" cy="37" r="1.7" fill="#24a856"/>
+</svg>

@@ -1,0 +1,23 @@
+# Private user data and credentials
+/data/
+/tools/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.bak
+*.mht
+*.mhtml
+.env
+.env.*
+!.env.example
+**/.venv/
+**/__pycache__/
+*.py[cod]
+node_modules/
+build/
+release/
+runtime/
+staging/
+media/
+logs/

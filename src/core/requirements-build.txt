@@ -1,0 +1,2 @@
+pyinstaller>=6.11
+sqlcipher3>=0.6.2

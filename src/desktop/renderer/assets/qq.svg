@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="QQ">
+  <defs><linearGradient id="q" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#68cfff"/><stop offset="1" stop-color="#4c7dff"/></linearGradient></defs>
+  <rect width="64" height="64" rx="18" fill="url(#q)"/>
+  <path d="M32 11c-9 0-15 8-15 19 0 4 1 8 3 11l-4 8 8-3c2 2 5 3 8 3s6-1 8-3l8 3-4-8c2-3 3-7 3-11 0-11-6-19-15-19Z" fill="#fff"/>
+  <ellipse cx="26" cy="27" rx="2.4" ry="3.5" fill="#16233d"/><ellipse cx="38" cy="27" rx="2.4" ry="3.5" fill="#16233d"/>
+  <path d="M27 34c3 2 7 2 10 0" fill="none" stroke="#16233d" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

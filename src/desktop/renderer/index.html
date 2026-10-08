@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QQ Insight</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="navigation-shell" aria-label="三级导航">
+        <section class="platform-rail" aria-label="第一级：聊天软件">
+          <div class="rail-logo" title="QQ Insight">Q</div>
+          <button class="platform-switch active" data-platform="qq" title="QQ">
+            <img src="assets/qq.svg" alt="" />
+            <span>QQ</span>
+          </button>
+          <button class="platform-switch" data-platform="wechat" title="微信 / VX">
+            <img src="assets/wechat.svg" alt="" />
+            <span>微信</span>
+          </button>
+          <button class="platform-switch platform-more" type="button" title="更多软件">
+            <img src="assets/apps.svg" alt="" />
+            <span>更多</span>
+          </button>
+        </section>
+
+        <section class="account-rail" aria-label="第二级：账号">
+          <div class="rail-heading"><p class="eyebrow">ACCOUNTS</p><h2 id="account-rail-title">QQ 账号</h2></div>
+          <div id="sidebar-account-list" class="sidebar-account-list"><div class="rail-empty">正在识别本机账号…</div></div>
+          <button id="sidebar-scan" class="rail-action" type="button"><span>↻</span> 重新扫描</button>
+        </section>
+
+        <section class="feature-rail" aria-label="第三级：功能">
+          <div class="brand"><span class="brand-mark">Q</span><span>QQ Insight</span></div>
+          <p class="brand-subtitle">本地聊天工作台</p>
+          <nav class="nav" aria-label="功能导航">
+            <button class="nav-item active" data-view="dashboard"><span>◈</span> 今日概览</button>
+            <button class="nav-item" data-view="conversations"><span>◌</span> 消息浏览</button>
+            <button class="nav-item" data-view="favorites"><span>☆</span> 我的收藏</button>
+            
+            <button class="nav-item" data-view="settings"><span>⚙</span> 设置</button>
+          </nav>
+          <div class="privacy-card"><span class="privacy-dot"></span><div><strong>本地存储</strong><small>AI 分析使用所选接口</small></div></div>
+          <div class="sidebar-footer">QQ Insight · 0.5.0-rel</div>
+        </section>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div><p class="eyebrow">LOCAL WORKSPACE</p><h1 id="page-title">今日概览</h1></div>
+          <div class="top-actions"><span id="active-context" class="context-pill">QQ / 正在识别账号</span><span id="core-state" class="state-pill">正在连接本地核心</span><select id="import-mode" aria-label="聊天记录更新方式" title="增量只解析新增和变化消息；全量重新校验所有记录"><option value="incremental">增量更新（推荐）</option><option value="full">全量更新（较慢）</option></select><button id="sync-button" class="primary-button">获取聊天记录</button></div>
+        </header>
+
+        <section id="dashboard-view" class="view active">
+          <div class="hero-card"><div><p class="eyebrow accent">LOCAL-FIRST CHAT INTELLIGENCE</p><h2>把消息变成下一步行动</h2><p>启动时只识别账号；只有你点击获取聊天记录并确认风险后，才会自动取钥、读取数据库并更新本地索引。</p><button id="hero-sync" class="secondary-button">获取聊天记录</button></div><div class="hero-orbit"><div class="orbit-ring"></div><div class="orbit-core">✦</div><span class="orbit-chip one">搜索</span><span class="orbit-chip two">线索</span><span class="orbit-chip three">本地</span></div></div>
+          <div class="stats-grid" id="stats-grid"><div class="empty-stats">导入快照后，这里会显示会话、消息和数据时间。</div></div>
+          <div class="split-grid"><section class="panel"><div class="panel-header"><div><p class="eyebrow">RECENT</p><h3>最近活跃会话</h3></div><button class="text-button" data-go="conversations">浏览全部 →</button></div><div id="recent-list" class="compact-list"><div class="empty">尚未导入数据</div></div></section><section class="panel mode-panel"><p class="eyebrow">ANALYSIS MODE</p><h3>按群分析与保存结果</h3><p>选择一个群后，可进行工作概要、速读、沟通建议、收藏推荐、特别关心和画像分析。结果保存在该群历史中。</p><button class="text-button" data-go="conversations">选择群聊进行 AI 分析 →</button></section></div>
+        </section>
+
+        <section id="conversations-view" class="view">
+          <div class="workspace-grid"><section class="conversation-panel"><div class="search-wrap"><span>⌕</span><input id="conversation-search" placeholder="搜索会话名、联系人、QQ / 群号" aria-label="搜索会话" /></div><div id="conversation-list" class="conversation-list"><div class="empty">请先导入 QQ 快照</div></div></section><section class="messages-panel"><div id="message-header" class="message-header"><div><p class="eyebrow">CONVERSATION</p><h2>选择一个会话</h2></div></div><form id="message-filters" class="message-filters">
+<label>范围<select id="message-scope"><option value="conversation">当前会话</option><option value="account">当前账号全部会话</option></select></label>
+<label>记录范围<select id="message-mode"><option value="recent">最近100条</option><option value="all">全部记录（分页）</option></select></label>
+<label>排序<select id="message-order"><option value="asc">正序 · 从早到晚</option><option value="desc">倒序 · 从晚到早</option></select></label>
+<label class="wide-field">搜索<input id="message-query" maxlength="1000" placeholder="正文、人名、QQ、群名 / 群号" /></label>
+<label>发送者<input id="message-sender" maxlength="1000" placeholder="姓名、QQ 或 UID" /></label>
+<label>方向<select id="message-direction"><option value="">全部方向</option><option value="incoming">收到</option><option value="outgoing">发出</option><option value="system">系统</option><option value="unknown">未知</option></select></label>
+<button class="outline-button" type="submit">搜索 / 筛选</button></form>
+<div class="message-pagination"><button id="message-newer" class="text-button" disabled>← 上一页</button><span id="message-page-state" aria-live="polite">请选择会话或搜索全部会话</span><button id="message-older" class="text-button" disabled>下一页 →</button></div>
+<div id="message-list" class="message-list"><div class="message-empty">消息正文会显示在这里。<br />导入只读快照后，选择左侧会话。</div></div></section></div>
+        </section>
+
+        <section id="favorites-view" class="view"><div class="panel"><h2>我的收藏</h2><form id="favorites-filters" class="message-filters"><input id="favorites-query" placeholder="搜索正文、会话、人名或 QQ" /><select id="favorites-order" aria-label="收藏排序"><option value="desc">倒序 · 从晚到早</option><option value="asc">正序 · 从早到晚</option></select><select id="favorites-kind"><option value="">全部收藏</option><option value="message">聊天记录</option><option value="image">图片</option></select><button class="outline-button">搜索</button><button id="open-favorites-folder" type="button" class="text-button">打开图片收藏文件夹</button></form><div id="favorites-list" class="message-list"></div><button id="favorites-more" class="outline-button" hidden>加载更多收藏</button></div></section>
+        <section id="group-ai-view" class="view">
+          <div class="group-ai-top"><button id="ai-back" class="text-button">← 返回群消息</button><h2 id="ai-group-title"></h2><span id="ai-status" role="status"></span></div>
+          <div class="group-ai-tabs"><button data-ai-tab="analysis" class="outline-button">AI分析</button><button data-ai-tab="settings" class="outline-button">群聊设置</button><button data-ai-tab="history" class="outline-button">历史结果</button></div>
+          <section id="ai-analysis-panel" class="panel ai-tab-panel"><h3>选择分析功能</h3><form id="ai-form"><div class="model-form"><label class="field"><span>功能</span><select id="ai-feature"></select></label><label class="field"><span>消息范围</span><select id="ai-mode"><option value="recent">最近 N 条</option><option value="time">指定时间段</option><option value="incremental">本功能尚未分析或有变化的消息</option></select></label><label class="field"><span>本次最多条数（1–10000）</span><input id="ai-limit" type="number" min="1" max="10000" value="500" /></label><label class="field"><span>发送者 QQ（可选）</span><input id="ai-sender" /></label><label class="field"><span>开始时间（时间段模式）</span><input id="ai-start" type="datetime-local" /></label><label class="field"><span>结束时间（不包含）</span><input id="ai-end" type="datetime-local" /></label><label class="field"><span>关键词（可选）</span><input id="ai-query" /></label><label class="field"><span>回复长度</span><select id="ai-length"><option>简短，100字以内</option><option>适中，200字以内</option><option>详细，500字以内</option></select></label><label class="field"><span>沟通语气</span><select id="ai-tone"><option>温和简洁</option><option>正式</option><option>直接</option></select></label></div><label class="field"><span>本次目标 / 关注方向</span><textarea id="ai-goal" maxlength="1000" placeholder="例如：梳理我作为组长需要完成的工作，或礼貌确认分工"></textarea></label><p id="ai-model-info" class="field-hint"></p><p class="field-hint">点击分析后，所选群消息、群设置和相关记忆将发送到你配置的模型接口。图片仅在本群开启图像分析时发送。结果按本群同功能合并，保留每次分析版本。</p><div class="form-actions"><button id="ai-run" class="primary-button danger-button">开始分析并保存</button><button id="ai-cancel" class="outline-button" type="button" disabled>取消分析</button></div></form><details class="prompt-preview"><summary>查看本功能 Prompt</summary><pre id="ai-prompt"></pre></details></section>
+          <section id="ai-settings-panel" class="panel ai-tab-panel" hidden><h3>本群设置</h3><form id="group-settings-form"><div class="model-form"><label class="field"><span>群聊分类</span><select id="group-category"><option>未分类</option><option>班级 / 课程</option><option>工作</option><option>项目</option><option>兴趣</option><option>生活</option></select></label><label class="field"><span>我的角色（仅本群）</span><input id="group-ai-role" maxlength="1000" placeholder="例如：第一组组长" /><small class="field-hint">每个群独立保存，不会沿用其他群的角色。</small></label><label class="field"><span>我在群里的自称 / 名字</span><input id="group-self-names" maxlength="1000" /></label><label class="field"><span>特别关心的人（多个 QQ / UID 用逗号分隔）</span><input id="group-watch-people" placeholder="10001, 10002, 10003" /></label><label class="field"><span>特别关心的关键词（逗号分隔）</span><input id="group-watch-keywords" /></label><label class="field"><span>收藏兴趣与偏好</span><input id="group-interests" maxlength="1000" /></label></div><div class="role-guess-actions"><button id="group-guess-role" class="outline-button" type="button">让 AI 从本群消息猜测我的角色</button><span id="group-memory-status" class="field-hint"></span></div><label class="field"><span>这个群的补充分析要求</span><textarea id="group-instructions" maxlength="1000"></textarea></label><div class="ai-checks"><label><input id="group-remember" type="checkbox" /> 使用并持续完善本群长期记忆</label><label><input id="group-images" type="checkbox" /> 向模型发送本群图片（需要图像模型）</label><label><input id="group-auto-favorite" type="checkbox" /> 自动采纳本群收藏推荐</label></div><div class="model-form"><label class="field"><span>每日最多自动收藏条数</span><input id="group-favorite-limit" type="number" min="1" max="100" /></label><label class="field"><span>图片收藏存储上限 MB</span><input id="group-favorite-storage" type="number" min="1" max="10000" /></label><label class="field"><span>定时增量分析（软件运行时）</span><select id="group-schedule"><option value="0">关闭</option><option value="5">每5分钟</option><option value="15">每15分钟</option><option value="30">每30分钟</option><option value="60">每60分钟</option></select></label><label class="field"><span>定时分析功能</span><select id="group-schedule-feature"></select></label></div><p class="field-hint">定时任务只分析本群已导入的新消息，不会自动启动或更新 QQ；没有新内容不调用模型。</p><button class="primary-button">保存群聊设置</button></form></section>
+          <section id="ai-history-panel" class="panel ai-tab-panel" hidden><div class="section-title"><h3>本群历史结果</h3><select id="ai-history-feature"></select><button id="ai-refresh-history" class="outline-button">刷新</button></div><p id="ai-history-memory" class="field-hint"></p><div id="ai-history-jobs" class="ai-job-grid"></div><div class="message-pagination"><button id="ai-jobs-prev" class="text-button" type="button">← 上一页</button><span id="ai-jobs-page-state"></span><button id="ai-jobs-next" class="text-button" type="button">下一页 →</button></div><section id="ai-history-detail" class="ai-history-detail" hidden><div class="section-title"><h3>分析详情</h3><button id="ai-close-detail" class="text-button" type="button">关闭详情</button></div><p id="ai-history-summary"></p><div id="ai-history-items"></div><div class="message-pagination"><button id="ai-items-prev" class="text-button" type="button">← 上一页</button><span id="ai-items-page-state"></span><button id="ai-items-next" class="text-button" type="button">下一页 →</button></div></section></section>
+        </section>
+        <section id="settings-view" class="view">
+          <div class="settings-header"><div><p class="eyebrow">CONFIGURATION</p><h2>设置中心</h2><p>切换聊天软件、QQ 账号和模型接口。微信目前只提供扩展入口。</p></div><span id="settings-saved" class="muted"></span></div>
+          <div class="settings-grid">
+            <section class="settings-card full model-card" id="analysis-api-card"><div class="section-title"><div><h3>逻辑分析 API（主模型）</h3><p>用于工作概要、群聊速读、回复建议、收藏推荐、特别关心、群画像和本群角色识别。填写下方 Base URL、模型名称和 API Key，保存后作为文字与逻辑分析的主模型。</p></div><div><button id="add-model-profile" class="outline-button">新增配置</button><button id="delete-model-profile" class="text-button danger-text">删除当前</button></div></div><div id="model-profile-tabs" class="profile-tabs"></div><div class="model-form"><label class="field"><span>配置名称</span><input id="model-name" placeholder="例如：Claude" /></label><label class="field"><span>接口类型</span><select id="model-provider"><option value="openai-compatible">OpenAI 兼容</option><option value="openai">OpenAI</option><option value="anthropic">Claude / Anthropic</option><option value="deepseek">DeepSeek</option><option value="minimax">MiniMax</option><option value="custom">自定义</option></select></label><label class="field span-2"><span>Base URL</span><input id="model-base-url" placeholder="https://api.example.com/v1" /></label><label class="field"><span>模型名称</span><input id="model-id" list="model-options" placeholder="读取列表后选择，也可手动输入" /><datalist id="model-options"></datalist></label><label class="field"><span>API Key</span><input id="model-api-key" type="password" placeholder="已保存则留空" /></label></div><div id="model-results-panel" class="model-results-panel" hidden><div class="model-results-head"><strong>接口返回的模型</strong><span id="model-results-count"></span></div><div id="model-results" class="model-results"></div><div class="model-pagination"><button id="model-page-prev" class="text-button" type="button">← 上一页</button><span id="model-page-state"></span><button id="model-page-next" class="text-button" type="button">下一页 →</button></div></div><div class="form-footer"><span id="model-key-state" class="field-hint"></span><div class="form-actions"><button id="discover-models" class="outline-button">读取可用模型</button><button id="save-model-profile" class="primary-button">保存并用于逻辑分析</button></div></div></section>
+            <section class="settings-card full"><h3>识图与语音 API</h3><p class="field-hint">上方主模型负责文字与逻辑分析；这里单独配置识图与语音。识图用于群图片分析；语音支持能力测试及本地文件转写。每次调用都计入下方账本。</p><div id="media-model-settings"></div></section>
+            <section class="settings-card full"><h3>AI 预算</h3><p id="official-text-price" class="field-hint"></p><p id="ai-budget-usage" class="field-hint"></p><form id="ai-budget-form" novalidate><div class="model-form"><label class="field"><span>单次 Token 上限</span><input id="budget-per-run" type="number" min="1000" max="10000000" step="1" required /></label><label class="field"><span>每日 Token 上限</span><input id="budget-daily" type="number" min="1000" max="100000000" step="1" required /></label><label class="field"><span>每月 Token 上限</span><input id="budget-monthly" type="number" min="1000" max="1000000000" step="1" required /></label><label class="field"><span>单段最大输出 Token（不是预算总额）</span><input id="budget-output" type="number" min="512" max="16384" step="1" required /></label><label class="field" hidden><span>旧版计价模型（历史设置）</span><input id="budget-price-model" readonly maxlength="160" /></label><label class="field" hidden><span>旧版输入单价</span><input id="budget-input-price" readonly type="number" min="0" step="any" /></label><label class="field" hidden><span>旧版输出单价</span><input id="budget-output-price" readonly type="number" min="0" step="any" /></label><label class="field"><span>月费用上限（0为关闭）</span><input id="budget-cost" type="number" min="0" max="1000000" step="any" required /></label><label class="field"><span>币种</span><select id="budget-currency"><option>CNY</option><option>USD</option></select></label></div><p class="field-hint">新请求自动匹配服务商与地域的官方定价快照。月费用上限仅适用于相同币种且价格已核实的调用；Token 预算始终生效。</p><p class="field-hint">单次上限最高1千万，每日1亿，每月10亿 Token。最大输出会在每段请求前预占，调高它不会增加可用预算。未知用量继续预占，重试不会清零已发生的用量。</p><div class="form-actions"><button class="primary-button" type="submit">保存 AI 预算</button><button id="budget-use-maximum" class="outline-button" type="button">使用最高 Token 额度并保存</button></div><p id="ai-budget-status" class="field-hint" role="status" aria-live="polite"></p></form></section>
+            <section class="settings-card full"><div class="section-title"><h3>AI 调用用量与费用</h3><button id="ai-usage-refresh" class="outline-button">刷新记录</button></div><p class="field-hint">每次请求单独记录。费用按软件内已核验的官方定价快照估算，实际账单可能包含免费额度或折扣；未知用量不会记成0，预占费用另行标记。</p><div class="usage-scroll"><table class="usage-table"><thead><tr><th>时间 / 模型 / 类型</th><th>Token / 时长</th><th>费用 / 单价快照</th></tr></thead><tbody id="ai-usage-body"></tbody></table></div><div class="form-actions"><button id="ai-usage-prev" class="text-button">上一页</button><span id="ai-usage-page"></span><button id="ai-usage-next" class="text-button">下一页</button></div></section>
+            <section class="settings-card full"><h3>消息浏览与图片缓存</h3><label class="field"><span>全部记录每页条数（20–500）</span><input id="message-page-size" type="number" min="20" max="500" value="100" /></label><button id="save-history-settings" class="primary-button">保存分页设置</button><button id="repair-messages" class="outline-button">重新解析当前账号已导入消息</button><button id="refresh-media" class="outline-button">重新查找缓存图片</button><p class="field-hint">重新解析已导入消息，或重新查找本机 QQ 图片缓存。</p></section>
+            <section class="settings-card full" id="database-transfer-card">
+              <div class="section-title"><div><h3>手动导入与数据库备份</h3><p>自动发现之外，也可以选择本地文件导入。软件数据库按原账号合并，重复消息保留当前记录。</p></div><button id="export-database" class="outline-button" type="button">导出全部账号 .db</button></div>
+              
+              <form id="manual-import-form">
+                <div class="model-form">
+                  <label class="field"><span>导入类型</span><select id="manual-format"><option value="qq_plain">已解密的 QQ 数据库</option><option value="qq_encrypted">加密的 QQ 数据库</option><option value="app_db">本软件的数据库 / 备份</option></select></label>
+                  <label class="field" id="manual-account-field"><span>数据库所属 QQ 号 / 已有账号</span><input id="manual-account" list="manual-accounts" maxlength="128" placeholder="填写此库所属 QQ 号" autocomplete="off" /><datalist id="manual-accounts"></datalist></label>
+                  <label class="field" id="manual-key-field" hidden><span>此加密库的 16 字符密钥（仅本次使用）</span><input id="manual-key" type="password" maxlength="16" autocomplete="off" placeholder="请输入对应密钥" /></label>
+                  <label class="field" id="manual-mode-field"><span>导入方式</span><select id="manual-mode"><option value="incremental">增量合并（推荐）</option><option value="full">全量重新解析</option></select></label>
+                </div>
+                <p id="manual-hint" class="field-hint">选择消息数据库；同目录的明文联系人、群资料库会一起导入。请确认账号归属。</p>
+                <div class="form-footer"><span id="manual-file-name" class="field-hint">尚未选择文件</span><div class="form-actions"><button id="pick-database" class="outline-button" type="button">选择数据库文件</button><button id="manual-import" class="primary-button danger-button" type="submit" disabled>确认导入</button></div></div>
+              </form>
+              <p class="field-hint">导出为明文 SQLite .db，含全部已导入消息、资料和角色，可再次导入。不包含密钥和 API 配置；包括软件已保存的图片。请妥善保存。</p>
+              <p id="transfer-status" class="field-hint" role="status" aria-live="polite"></p>
+            </section>
+            <section class="settings-card full"><div class="section-title"><div><h3>聊天软件</h3><p>同一套查询与分析界面通过平台适配器接入不同软件。</p></div></div><div class="platform-options"><button class="platform-option active" data-platform="qq"><b>QQ</b><span>已实现 · 自动发现与导入</span></button><button class="platform-option disabled" data-platform="wechat"><b>微信 / VX</b><span>接口已预留 · 暂未实现</span></button></div></section>
+            <section class="settings-card"><div class="section-title"><div><h3>QQ 账号</h3><p>扫描标准数据目录，可管理多个账号。</p></div><button id="scan-sources" class="outline-button">重新扫描</button></div><div id="source-list" class="source-list"><div class="empty">正在扫描本机 QQ 数据目录…</div></div></section>
+            <section class="settings-card"><div class="section-title"><div><h3>账号设置</h3><p>别名和自动获取的数据库密钥按账号隔离。</p></div></div><label class="field"><span>账号别名</span><input id="account-alias" placeholder="例如：工作 QQ" /></label><p id="database-key-state" class="field-hint">首次导入时自动获取并验证密钥；密钥只保存在 Windows 安全存储中。</p><button id="save-account" class="primary-button">保存账号设置</button></section>
+            
+          </div>
+        </section>
+      </main>
+    </div>
+    <div id="decrypt-modal" class="modal" aria-hidden="true"><div class="modal-card"><p class="eyebrow accent">RISK CONFIRMATION</p><h2>读取聊天记录前请确认风险</h2><p id="decrypt-message"></p><div class="notice-box"><strong id="decrypt-risk-title">自动取钥可能触发 QQ 风控</strong><span id="decrypt-risk-detail">依赖的开源工具会启动 QQ 并进行动态调试。该操作可能导致 QQ 异常、数据损坏、账号限制或封号。建议先备份聊天数据，并自行承担使用风险。</span></div><p class="field-hint">默认关闭 QQ 后直接读取已有本地记录；仅勾选联网同步时重新启动 QQ。请保存未发送内容。应用只读取源数据库；明文临时文件位于应用私有目录，导入后删除，密钥不会显示或写入日志。</p><label class="sync-option"><input id="sync-online" type="checkbox" />先启动 QQ 联网同步（较慢；需登录目标账号）</label><div class="modal-actions"><button id="cancel-decrypt" class="secondary-button">取消</button><button id="confirm-decrypt" class="primary-button danger-button">我已了解风险，继续读取</button></div></div></div>
+    <div id="toast" class="toast" role="status"></div>
+    <script src="renderer.js"></script>
+    <script src="workspace.js"></script>
+    <script src="group-ai.js"></script>
+    <script src="media-settings.js"></script>
+  </body>
+</html>

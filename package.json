@@ -1,0 +1,55 @@
+{
+  "name": "qq-insight-local",
+  "version": "0.5.0-rel",
+  "description": "本地优先的 QQ 聊天快照分析工具",
+  "main": "src/desktop/main/main.js",
+  "author": "Local test build",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable --publish never",
+    "test:core": "set PYTHONPATH=src/core&& py -3.14 -m unittest discover -s src/core/tests -v",
+    "test:key-extractor": "node tests/key-extractor.test.js",
+    "test:model-discovery": "node tests/model-discovery.test.js",
+    "test:settings": "node tests/settings-store.test.js",
+    "test:desktop": "node tests/key-extractor.test.js && node tests/model-discovery.test.js && node tests/settings-store.test.js && node tests/qq-session.test.js && node tests/database-transfer.test.js && node tests/model-gateway.test.js && node tests/media-api.test.js",
+    "test:history-ui": "electron tests/renderer-history.test.js",
+    "test:workspace-ui": "electron tests/renderer-workspace.test.js",
+    "test:transfer-ui": "electron tests/renderer-transfer.test.js",
+    "test:ai-ui": "electron tests/renderer-ai.test.js",
+    "test:media-ui": "electron tests/renderer-media.test.js",
+    "test:budget-ui": "electron tests/renderer-budget.test.js"
+  },
+  "devDependencies": {
+    "electron": "^37.2.5",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "local.qqinsight.test",
+    "productName": "QQ Insight",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/desktop/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/core/qq-insight-core.exe",
+        "to": "core/qq-insight-core.exe"
+      }
+    ],
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "artifactName": "QQ-Insight-${version}-portable.${ext}",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "portable": {
+      "requestExecutionLevel": "user"
+    }
+  }
+}
