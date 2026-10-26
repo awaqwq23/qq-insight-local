@@ -21,6 +21,11 @@ with service.storage.connect() as conn:
   conn.execute("INSERT OR IGNORE INTO messages(id,conversation_id,source_key,sent_at,direction,sender_key,sender_qq,sender_name,text,content_kind,parse_status,platform,account_id) VALUES(?,?,?,?,'incoming',?,?,?,?,'文本','partial','qq','synthetic')",(f'synthetic-{index}','synthetic-group',f'synthetic-{index}',1790132400+index*60,sender,sender,name,body))
 service.ai.save_group('synthetic-group','synthetic',{'category':'班级 / 课程','role':'第一组组长','watch_people':['100001'],'watch_keywords':['名单','延期'],'interests':'实用复盘方法与课程资料'})
 
+if '--recent-ai' in sys.argv:
+ session=service.workspace_agent.create_session('synthetic',title='合成历史入口',conversation_id='synthetic-group')
+ run=service.workspace_agent.begin('synthetic','合成对话回顾',session_id=session['id'],conversation_id='synthetic-group')
+ service.workspace_agent.finish(run['run_id'],'synthetic',{'answer':'合成历史回复，无模型调用。','evidence_ids':[]})
+
 # Optional deterministic 64x64 RGB fixture for an actual vision request.
 import os
 if os.environ.get('QQ_AI_TEST_VISION')=='1':

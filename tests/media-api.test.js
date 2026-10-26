@@ -18,8 +18,8 @@ async function main(){
  assert.ok(capability('qwen-vl-plus').vision);assert.ok(capability('custom',{input_modalities:['image']}).vision);
  assert.ok(capability('gpt-4o-mini-transcribe').speech);assert.ok(capability('qwen3-asr-flash-2026-02-10').speech);
  for(const id of ['qwen3-asr-flash-realtime','qwen3-asr-flash-filetrans','gpt-image-1','deepseek-v3'])assert.ok(!capability(id).vision&&!capability(id).speech);
- assert.equal(officialPrice({baseUrl:'https://proxy.example.test/v1',model:'gpt-4o-mini'}),null);
- assert.equal(officialPrice({baseUrl:'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',model:'qwen-vl-plus'}),null);
+ assert.equal(officialPrice({baseUrl:'https://proxy.example.test/v1',model:'gpt-4o-mini'}).input_price,0.15);
+ assert.equal(officialPrice({baseUrl:'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',model:'qwen-vl-plus'}).reference_only,true);
  const price=officialPrice({baseUrl:'https://dashscope.aliyuncs.com/compatible-mode/v1',model:'deepseek-v4-pro-0813'});
  assert.equal(price.input_price,9);assert.equal(price.off_peak.input_price,4.5);
  const data=fs.readFileSync(path.join(__dirname,'../src/desktop/main/test-assets/speech.wav'));assert.ok(wavSeconds(data)>1);

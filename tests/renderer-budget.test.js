@@ -13,13 +13,20 @@ app.whenReady().then(async()=>{
     if(method==='ai.budget.save'){qa.saves.push(params.settings);if(qa.fail)throw new Error('合成保存失败');qa.budget={...qa.budget,...params.settings};return {...qa.budget};}
     return {};
    }};
-   showView('settings');await loadAIBudget();
+   showView('settings');showSettingsPage('usage');await loadAIBudget();
   `);
   const invalid=await js(`$('#budget-per-run').value=1000000000;return {saved:await saveAIBudget(),status:$('#ai-budget-status').textContent,count:qa.saves.length};`);
   assert.equal(invalid.saved,false);assert.match(invalid.status,/预算未保存/);assert.equal(invalid.count,0);
   const maximum=await js(`await saveAIBudget(null,true);return {saved:qa.saves.at(-1),status:$('#ai-budget-status').textContent};`);
   assert.equal(maximum.saved.per_run_tokens,10000000);assert.equal(maximum.saved.daily_tokens,100000000);assert.equal(maximum.saved.monthly_tokens,1000000000);
   assert.equal(maximum.saved.output_tokens,4096);assert.equal(maximum.saved.monthly_cost,0);assert.match(maximum.status,/已保存并生效/);
+  assert.equal(await js(`$('#budget-output').value=65536;return await saveAIBudget();`),true);
+  assert.equal(await js(`return qa.saves.at(-1).output_tokens;`),65536);
+  assert.equal(await js(`return $('#budget-output').max;`),'1000000');
+  await js(`state.settings.modelProfiles=[{id:'synthetic',limits:{output_tokens:4096}}];state.settings.activeModelProfileId='synthetic';renderAIBudget(qa.budget);`);
+  assert.match(await js(`return $('#budget-effective-output').textContent;`),/预算 65,536.*当前模型 4,096.*实际单次最多 4,096/);
+  await js(`state.settings.modelProfiles[0].limits.output_tokens=65536;renderAIBudget(qa.budget);`);
+  assert.match(await js(`return $('#budget-effective-output').textContent;`),/实际单次最多 65,536/);
   const failure=await js(`qa.fail=true;await saveAIBudget();return {status:$('#ai-budget-status').textContent,disabled:$('#budget-use-maximum').disabled};`);
   assert.match(failure.status,/预算未保存.*合成保存失败/);assert.equal(failure.disabled,false);
   const stale=await js(`qa.fail=false;qa.delay=true;qa.before={...qa.budget,daily_tokens:300000};const load=loadAIBudget();await saveAIBudget(null,true);qa.resolve();await load;return $('#budget-daily').value;`);

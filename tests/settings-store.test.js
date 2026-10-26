@@ -26,6 +26,10 @@ function main() {
     baseUrl: 'https://example.com/v1', model: 'custom-model', apiKey: 'secret-value',
   } });
   assert.equal(fresh.getModelApiKey('custom'), 'secret-value');
+  assert.equal(fresh.publicValue().modelProfiles.find(p=>p.id==='custom').protocol,'chat');
+  fresh.save({modelProfile:{...fresh.data.modelProfiles.find(p=>p.id==='custom'),protocol:'responses'}});
+  assert.equal(storeAt(freshDir).publicValue().modelProfiles.find(p=>p.id==='custom').protocol,'responses');
+  assert.throws(()=>fresh.save({modelProfile:{id:'custom',protocol:'invalid'}}));
   assert.equal(fs.readFileSync(path.join(freshDir, 'settings.json'), 'utf8').includes('secret-value'), false);
   fresh.save({ deleteModelProfileId: 'openai-default' });
   assert.equal(fresh.publicValue().modelProfiles.some((item) => item.id === 'openai-default'), true);

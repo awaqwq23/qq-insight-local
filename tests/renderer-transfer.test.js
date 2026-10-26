@@ -22,7 +22,7 @@ app.whenReady().then(async () => {
         discoverSources: async () => ({items:[],accounts:[{account_id:'synthetic',account_label:'合成离线账号',offline:true}],settings}),
         rpc: async method => method === 'system.health' ? {message_count:205} : method === 'dashboard.overview' ? {recent_conversations:[],message_count:205} : {items:[]},
       };
-      showView('settings');
+      showView('settings');showSettingsPage('data');
       $('#manual-format').value='qq_encrypted'; updateManualFormat();
       const encryptedKeyVisible=getComputedStyle($('#manual-key-field')).display !== 'none';
       await pickDatabase(); $('#manual-key').value='0123456789abcdef';
@@ -50,7 +50,7 @@ app.whenReady().then(async () => {
     assert.equal(result.invalidated, true);
     assert.match(result.exportStatus, /导出完成，共 205 条/);
     assert.equal(result.recovered, true);
-    await win.webContents.executeJavaScript(`showView('settings'); $('#core-state').textContent='合成测试核心'; $('#manual-format').value='qq_encrypted'; updateManualFormat(); document.getAnimations().forEach(animation => animation.finish());`);
+    await win.webContents.executeJavaScript(`showView('settings');showSettingsPage('data'); $('#core-state').textContent='合成测试核心'; $('#manual-format').value='qq_encrypted'; updateManualFormat(); document.getAnimations().forEach(animation => animation.finish());`);
     await new Promise(resolve => setTimeout(resolve, 350));
     const screenshot = await win.webContents.capturePage();
     fs.mkdirSync(path.join(__dirname, '../build/qa'), { recursive: true });

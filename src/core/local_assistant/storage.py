@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from pathlib import Path
 import sqlite3
 from typing import Iterator
+from .member_cache import SCHEMA as MEMBER_SCHEMA
 
 
 SCHEMA = """
@@ -81,6 +82,7 @@ class Storage:
         with self.connect() as conn:
             had_fts_keys = conn.execute("SELECT 1 FROM sqlite_master WHERE name='message_fts_keys'").fetchone()
             conn.executescript(SCHEMA)
+            conn.executescript(MEMBER_SCHEMA)
             if not had_fts_keys:
                 conn.execute("INSERT OR IGNORE INTO message_fts_keys SELECT message_id,rowid FROM messages_fts")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_fts_keys_rowid ON message_fts_keys(fts_rowid)")
@@ -98,6 +100,8 @@ class Storage:
             self._ensure_column(conn, "messages", "account_id", "TEXT NOT NULL DEFAULT 'legacy'")
             self._ensure_column(conn, "messages", "sender_qq", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(conn, "messages", "sender_name", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(conn, "messages", "sender_nickname", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(conn, "messages", "sender_card", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(conn, "messages", "media_json", "TEXT NOT NULL DEFAULT '[]'")
             self._ensure_column(conn, "messages", "source_digest", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(conn, "messages", "sync_key", "TEXT NOT NULL DEFAULT ''")

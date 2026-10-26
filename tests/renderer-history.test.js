@@ -59,6 +59,7 @@ app.whenReady().then(async () => {
     assert.equal(result.search.method, 'message.search');
     assert.equal(result.search.params.sender, '000000');
     assert.equal(result.search.params.account_id, 'synthetic-a');
+    assert.equal(result.search.params.order, 'desc');
     assert.match(result.empty, /没有符合条件/);
     assert.equal(result.staleIgnored, true);
     assert.equal(result.color, 'rgb(200, 50, 69)');

@@ -9,6 +9,16 @@ from local_assistant.ai_prompts import FEATURES
 
 MODEL={'id':'synthetic','provider':'openai-compatible','model':'synthetic-model','endpoint_hash':'local'}
 
+def wire_message(material,row):
+    if isinstance(row,dict):return row
+    value=dict(zip(material['message_columns'],row));value.update(value.pop('extra'))
+    if 'images' in value:value['media']=[*value.get('media',[]),*[{'index':index,'type':'image'} for index in value.pop('images')]]
+    value['time']=material['days'][value.pop('day')]+'T'+value.pop('clock')+'+08:00'
+    person=material.get('people',{}).get(value.get('sender'),{})
+    value.update(sender_qq=person.get('qq',''),sender_key=person.get('uid',''))
+    value.setdefault('media',[])
+    return value
+
 
 class AITest(unittest.TestCase):
     def setUp(self):
@@ -28,9 +38,11 @@ class AITest(unittest.TestCase):
         return self.ai.prepare('group-a','a',feature,MODEL,options or {'mode':'recent','limit':100})
 
     def output(self,request,title='合成任务',update_id=''):
-        data=json.loads(request['user']);message=data['messages'][0]
+        data=json.loads(request['user']);message=wire_message(data,data['messages'][0])
+        if data['feature']=='profile':
+            return {'summary':'合成成员阶段画像','items':[{'title':title,'body':'仅本次发言的合成观察，其他维度待补充。','subject':message.get('sender_qq') or message.get('sender_key') or message.get('sender'),'evidence_ids':[message['id']],'category':'成员阶段画像','update_id':update_id}]}
         if data['feature']=='identity':title=data['group_settings']['role'] or '第一组组长'
-        return {'summary':'合成摘要','items':[{'title':title,'body':'需要核实的合成工作','evidence_ids':[message['id']],'category':'我的角色' if data['feature']=='identity' else '待核实','update_id':update_id}]}
+        return {'summary':'合成摘要','items':[{'title':title,'body':'需要核实的合成工作','evidence_ids':[message['id']],'category':'我的角色' if data['feature']=='identity' else '待核实','update_id':update_id,'drafts':['你在进行风格模拟，不自称本人。'] if data['feature']=='style' else []}]}
 
     def complete(self,prepared,title='合成任务',update_id=''):
         while True:
@@ -41,16 +53,16 @@ class AITest(unittest.TestCase):
 
     def test_all_features_prompts_scope_cache_and_invocation_history(self):
         self.ai.save_group('group-a','a',{'category':'项目','role':'第一组组长','watch_people':['100001'],'watch_keywords':['作业']})
-        for feature in FEATURES:
+        for feature in (key for key in FEATURES if key!='style'):
             prepared=self.prepare(feature);request=self.ai.next_chunk(prepared['job_id'])
             material=json.loads(request['user'])
             self.assertEqual(material['group_settings']['effective_role'],'第一组组长')
-            self.assertEqual({item['id'] for item in material['messages']},{'m0','m1'})
+            self.assertEqual({wire_message(material,item)['id'] for item in material['messages']},{'m0','m1'})
             self.assertNotIn('私有群B内容',request['user'])
             self.ai.commit_chunk(prepared['job_id'],request['attempt'],self.output(request),{'input_tokens':10,'output_tokens':20})
             self.ai.finish(prepared['job_id'])
             self.assertEqual(self.prepare(feature)['status'],'cached')
-        history=self.ai.history('group-a','a',job_page_size=50);self.assertEqual(len(history['jobs']),len(FEATURES)*2)
+        history=self.ai.history('group-a','a',job_page_size=50);self.assertEqual(len(history['jobs']),(len(FEATURES)-1)*2)
         self.assertEqual({job['status'] for job in history['jobs']},{'completed','cached'})
         self.assertEqual(self.ai.history('group-b','a')['items'],[])
         with self.assertRaises(CoreError):self.ai.history('group-a','b')
@@ -85,11 +97,12 @@ class AITest(unittest.TestCase):
         self.assertEqual(self.prepare('summary',mode='incremental')['status'],'queued')
         with self.app.storage.connect() as conn:self.add_message(conn,'late','group-a','晚到的旧消息',10)
         prepared=self.prepare(mode='incremental');request=self.ai.next_chunk(prepared['job_id'])
-        self.assertEqual([row['id'] for row in json.loads(request['user'])['messages']],['late'])
+        self.assertEqual(request['evidence_aliases'],{'late':'m0'})
+        self.assertEqual([row[0] for row in json.loads(request['user'])['messages']],['m0'])
         self.ai.commit_chunk(prepared['job_id'],request['attempt'],self.output(request),{'input_tokens':1,'output_tokens':1});self.ai.finish(prepared['job_id'])
         with self.app.storage.connect() as conn:conn.execute("UPDATE messages SET text='改为下周一交' WHERE id='m0'")
         request=self.ai.next_chunk(self.prepare(mode='incremental')['job_id'])
-        self.assertEqual([row['id'] for row in json.loads(request['user'])['messages']],['m0'])
+        self.assertEqual([row[0] for row in json.loads(request['user'])['messages']],['m0'])
 
     def test_merge_versions_explicit_update_and_user_lock(self):
         self.complete(self.prepare());item=self.ai.history('group-a','a')['items'][0]

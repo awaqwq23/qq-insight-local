@@ -3,12 +3,13 @@ function favoriteButton(id, index, enabled) {
 }
 
 function messageCard(item, all = false) {
+  const direction=item.direction!=='system' && (item.is_self || (item.sender_qq && item.sender_qq===activeScope().account_id)) ? 'outgoing' : item.direction;
   const imageOnly = Number.isInteger(item.favorite_media_index) && item.favorite_media_index >= 0;
   const media = (item.media || []).map((value, index) => {
     if (value.type !== 'image' || (imageOnly && index !== item.favorite_media_index)) return '';
     return `<figure class="message-media unavailable" data-image-message="${escapeHtml(item.id)}" data-image-index="${index}"><img alt="${escapeHtml(value.filename || '聊天图片')}" hidden /><div class="media-placeholder">正在查找本地图片…</div><figcaption>${favoriteButton(item.id, index, value.favorite)}<span>${escapeHtml(value.filename || '聊天图片')}</span></figcaption></figure>`;
   }).join('');
-  return `<article class="message-row ${escapeHtml(item.direction)}" data-message-id="${escapeHtml(item.id)}"><div class="message-meta"><span>${escapeHtml(messageSender(item))}</span><time>${formatTime(item.sent_at)}</time>${favoriteButton(item.id, -1, item.favorite)}</div>${all ? `<small>${escapeHtml(item.title)}</small>` : ''}<p>${escapeHtml(item.text)}</p>${(item.replies || []).map(reply => `<blockquote><small>引用 · ${escapeHtml(reply.sender || '')}</small><p>${escapeHtml(reply.text)}</p></blockquote>`).join('')}${media}<small>${escapeHtml(item.content_kind)}</small><button class="text-button context-link" data-context="${escapeHtml(item.id)}">查看上下文</button></article>`;
+  return `<article class="message-row ${escapeHtml(direction)}" data-message-id="${escapeHtml(item.id)}"><div class="message-meta"><span>${escapeHtml(messageSender(item))}</span><time>${formatTime(item.sent_at)}</time>${item.memory?.compressed?`<span class="tag" title="${escapeHtml(item.memory.updated_at)}">已处理</span>`:''}${favoriteButton(item.id, -1, item.favorite)}</div>${all ? `<small>${escapeHtml(item.title)}</small>` : ''}<p>${escapeHtml(item.text)}</p>${(item.replies || []).map(reply => `<blockquote><small>引用 · ${escapeHtml(reply.sender || '')}</small><p>${escapeHtml(reply.text)}</p></blockquote>`).join('')}${media}<small>${escapeHtml(item.content_kind)}</small><button class="text-button context-link" data-context="${escapeHtml(item.id)}">查看上下文</button></article>`;
 }
 
 function renderMessages(items, container, all = false, append = false) {
@@ -120,8 +121,8 @@ async function openMessageContext(messageId) {
     renderConversations(state.conversations);
     if (result.conversation.kind === 'group') {
       if (!state.conversations.some(item => item.id === result.conversation.id)) state.conversations.push(result.conversation);
-      attachGroupActions(result.conversation.id);
     }
+    attachConversationActions(result.conversation.id);
   } catch { if (request === state.messageRequest) $('#message-list').innerHTML = '<div class="message-empty">无法定位这条消息，请重新选择账号或刷新线索。</div>'; }
 }
 

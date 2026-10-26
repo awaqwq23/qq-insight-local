@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import re
+import time
 
 from .errors import CoreError
 
@@ -65,13 +66,14 @@ class MediaStore:
     def index(self, account, roots):
         signature = tuple(str(root) for root in roots)
         cached = self.indices.get(account)
-        if cached and cached[0] == signature: return cached[1]
+        if cached and cached[0] == signature and time.monotonic()-cached[2]<60: return cached[1]
         names = {}
         count = 0
         for root in roots:
             for current, directories, files in os.walk(root, followlinks=False):
-                directories[:] = [name for name in directories if not (Path(current) / name).is_symlink()
+                directories[:] = sorted([name for name in directories if not (Path(current) / name).is_symlink()
                                     and not (Path(current) / name).is_junction() and name not in ('node_modules', '.git')]
+                                    ,key=lambda name:(name.lower() not in ('nt_data','pic','image','ori','thumb'),name))
                 for name in files:
                     count += 1
                     if count > 100000: break
@@ -82,7 +84,7 @@ class MediaStore:
                         names.setdefault(digest.lower(), []).append(file)
                 if count > 100000: break
             if count > 100000: break
-        self.indices[account] = signature, names
+        self.indices[account] = signature, names, time.monotonic()
         return names
 
     def resolve(self, message, item):

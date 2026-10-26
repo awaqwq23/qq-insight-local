@@ -74,13 +74,19 @@ function activeScope() {
   };
 }
 
-function showView(name) {
-  document.querySelectorAll('.view').forEach((node) => node.classList.toggle('active', node.id === `${name}-view`));
-  document.querySelectorAll('.nav-item').forEach((node) => node.classList.toggle('active', node.dataset.view === name));
+function showView(name, load=true) {
+  if(name==='workspace-agent' && workspaceUI.conversation)resetWorkspaceChats();
+  const view=name==='conversation-agent'?'workspace-agent':name;
+  $('.app-shell').classList.toggle('chat-focus',view==='workspace-agent');
+  if($('#workspace-chat-menu'))$('#workspace-chat-menu').open=false;
+  document.querySelectorAll('.view').forEach((node) => node.classList.toggle('active', node.id === `${view}-view`));
+  document.querySelectorAll('.nav-item').forEach((node) => node.classList.toggle('active', node.dataset.view === (name==='conversation-agent'?'conversations':name)));
   if (name === 'favorites') loadFavorites();
+  if (name === 'workspace-agent' || name === 'conversation-agent') {renderChatContext();if(load)loadWorkspaceHistory();}
+  if (name === 'ai-history') loadRecentAIHistory();
   if (name === 'settings') { loadAIBudget(); renderMediaSettings(); loadUsage(); }
   $('#page-title').textContent = {
-    dashboard: '今日概览', conversations: '消息浏览', digest: '工作概要', settings: '设置中心', favorites: '我的收藏', 'group-ai': '群 AI 工作台',
+    dashboard: '今日概览', conversations: '消息浏览', digest: '工作概要', settings: '设置中心', favorites: '我的收藏', 'group-ai': '群 AI 工作台', 'workspace-agent':'全局 AI Agent', 'conversation-agent':'会话 AI 聊天', 'ai-history':'历史记录',
   }[name];
 }
 
@@ -172,7 +178,7 @@ async function loadMessages(page = 0) {
   const conversation = state.conversations.find((item) => item.id === id) || state.overview?.recent_conversations.find((item) => item.id === id);
   const title = all ? '当前账号全部会话' : conversation?.title || '当前会话';
   $('#message-header').innerHTML = `<div><p class="eyebrow">CHAT HISTORY</p><h2>${escapeHtml(title)}</h2><p class="muted">全部已导入历史每页 ${state.settings?.messagePageSize || 100} 条；筛选覆盖全部已导入记录。</p></div>`;
-  if (!all && conversation?.kind === 'group') attachGroupActions(id);
+  attachConversationActions(all ? '' : id);
   $('#message-newer').disabled = true;
   $('#message-older').disabled = true;
   if (!all && !id) {
@@ -260,7 +266,7 @@ function renderAccountRail() {
 
   $('#sidebar-scan').disabled = false;
   $('#sidebar-account-list').innerHTML = accounts.length
-    ? accounts.map((source) => `<button class="sidebar-account ${state.settings?.activeAccountId === source.account_id ? 'active' : ''}" data-account-id="${escapeHtml(source.account_id)}">${accountAvatar(source)}<span class="account-copy"><strong>${escapeHtml(source.account_label)}</strong><small>${source.offline ? '本地记录 · 可浏览' : source.last_imported_at ? '已导入 · 可同步' : source.requires_decryption ? '已发现 · 待解密' : '已发现 · 可导入'}</small></span></button>`).join('')
+    ? accounts.map((source) => `<button class="sidebar-account ${state.settings?.activeAccountId === source.account_id ? 'active' : ''}" data-account-id="${escapeHtml(source.account_id)}" title="${escapeHtml(source.account_label)}" aria-label="${escapeHtml(source.account_label)}">${accountAvatar(source)}<span class="account-copy"><strong>${escapeHtml(source.account_label)}</strong><small>${source.offline ? '本地记录 · 可浏览' : source.last_imported_at ? '已导入 · 可同步' : source.requires_decryption ? '已发现 · 待解密' : '已发现 · 可导入'}</small></span></button>`).join('')
     : '<div class="rail-empty">未发现 QQ 账号。应用会自动扫描标准数据目录。</div>';
   document.querySelectorAll('.sidebar-account').forEach((node) => node.addEventListener('click', () => selectAccount(node.dataset.accountId)));
 
@@ -282,7 +288,7 @@ function renderSources() {
     return;
   }
   container.innerHTML = state.sources.length
-    ? state.sources.map((source) => `<button class="source-item ${state.settings?.activeAccountId === source.account_id ? 'selected' : ''}" data-source-id="${source.id}" data-account-id="${escapeHtml(source.account_id)}"><span class="source-icon">${source.source_kind === 'plaintext' ? '✓' : '🔒'}</span><span><strong>${escapeHtml(source.account_label)}</strong><small>${source.source_kind === 'plaintext' ? '明文快照，可直接导入' : '加密数据库，确认风险后自动取钥'} · ${formatNumber(Math.round(source.size / 1048576))} MB${source.last_imported_at ? ' · 已导入' : ''}</small></span><b>${source.last_imported_at ? '更新' : '获取'}</b></button>`).join('')
+    ? state.sources.map((source) => `<button class="source-item ${state.settings?.activeAccountId === source.account_id ? 'selected' : ''}" data-source-id="${source.id}" data-account-id="${escapeHtml(source.account_id)}" title="${escapeHtml(source.account_label)}" aria-label="${escapeHtml(source.account_label)}"><span class="source-icon">${source.source_kind === 'plaintext' ? '✓' : '🔒'}</span><span><strong>${escapeHtml(source.account_label)}</strong><small>${source.source_kind === 'plaintext' ? '明文快照，可直接导入' : '加密数据库，确认风险后自动取钥'} · ${formatNumber(Math.round(source.size / 1048576))} MB${source.last_imported_at ? ' · 已导入' : ''}</small></span><b>${source.last_imported_at ? '更新' : '获取'}</b></button>`).join('')
     : '<div class="empty">未在标准目录中发现 nt_msg.db。请确认本机已登录过 NTQQ。</div>';
   document.querySelectorAll('.source-item').forEach((node) => node.addEventListener('click', async () => {
     await selectAccount(node.dataset.accountId);
@@ -418,6 +424,19 @@ async function exportDatabase() {
   } finally { setTransferBusy(false); }
 }
 
+async function exportRoster(kind, conversationId = '', button) {
+  const scope = activeScope();
+  if (!scope.account_id || scope.platform !== 'qq') { toast('请先选择 QQ 账号。', 'error'); return; }
+  if (button) button.disabled = true;
+  try {
+    const input = { ...scope, kind, conversation_id: conversationId };
+    if (kind === 'full_members') toast('请在QQ官网窗口登录当前账号。全部分页人数核对一致后选择保存位置；关闭窗口可取消。');
+    const result = await (kind === 'full_members' ? window.qqInsight.exportFullRoster(input) : window.qqInsight.exportRoster(input));
+    if (result) toast(`已导出 ${formatNumber(result.count)} 项。${result.note}`);
+  } catch (error) { toast(errorMessage(error), 'error'); }
+  finally { if (button) button.disabled = false; }
+}
+
 function importResultMessage(result) {
   if (result.status === 'already_imported') return '消息与资料没有变化，本地索引已是最新。';
   const changes = result.changes || {};
@@ -533,6 +552,9 @@ async function selectAccount(accountId) {
   state.settings = await window.qqInsight.saveSettings({ activePlatform: 'qq', activeAccountId: accountId });
   state.activeConversation = null;
   groupAI.request++; groupAI.conversation = null;
+  resetWorkspaceChats();
+  if($('#workspace-agent-view').classList.contains('active'))loadWorkspaceHistory();
+  if($('#ai-history-view').classList.contains('active'))loadRecentAIHistory();
   if ($('#group-ai-view').classList.contains('active')) showView('conversations');
   resetMessagePages();
   renderAccountRail();
@@ -549,6 +571,9 @@ async function switchPlatform(platform) {
   state.settings = await window.qqInsight.saveSettings({ activePlatform: platform });
   state.activeConversation = null;
   groupAI.request++; groupAI.conversation = null;
+  resetWorkspaceChats();
+  if($('#workspace-agent-view').classList.contains('active'))loadWorkspaceHistory();
+  if($('#ai-history-view').classList.contains('active'))loadRecentAIHistory();
   if ($('#group-ai-view').classList.contains('active')) showView('conversations');
   resetMessagePages();
   renderPlatformOptions();
@@ -577,6 +602,7 @@ function resetModelCatalog() {
   state.modelCatalog = { profileId: '', models: [], page: 0 };
   $('#model-options').innerHTML = '';
   $('#model-results-panel').hidden = true;
+  $('#model-search').value = '';
 }
 
 function renderModelCatalog() {
@@ -585,18 +611,23 @@ function renderModelCatalog() {
     $('#model-results-panel').hidden = true;
     return;
   }
-  const pages = Math.max(1, Math.ceil(models.length / MODEL_PAGE_SIZE));
+  const query=$('#model-search').value.trim().toLowerCase();
+  const filtered=models.filter(model=>model.toLowerCase().includes(query));
+  const pages = Math.max(1, Math.ceil(filtered.length / MODEL_PAGE_SIZE));
   state.modelCatalog.page = Math.min(Math.max(0, state.modelCatalog.page), pages - 1);
   const start = state.modelCatalog.page * MODEL_PAGE_SIZE;
   const selected = $('#model-id').value;
-  $('#model-results').innerHTML = models.slice(start, start + MODEL_PAGE_SIZE)
+  $('#model-results').innerHTML = filtered.slice(start, start + MODEL_PAGE_SIZE)
     .map((model) => `<button class="model-result ${model === selected ? 'selected' : ''}" type="button" data-model-id="${escapeHtml(model)}" title="${escapeHtml(model)}">${escapeHtml(model)}</button>`)
     .join('');
   document.querySelectorAll('.model-result').forEach((node) => node.addEventListener('click', () => {
     $('#model-id').value = node.dataset.modelId;
+    settingsUI.textVersion++;settingsUI.textDirty=true;$('#model-edit-status').textContent='有未保存修改';
     renderModelCatalog();
+    refreshModelLimits();
   }));
-  $('#model-results-count').textContent = `共 ${formatNumber(models.length)} 个`;
+  $('#model-results-count').textContent = query?`匹配 ${formatNumber(filtered.length)} / ${formatNumber(models.length)} 个`:`共 ${formatNumber(models.length)} 个`;
+  if(!filtered.length)$('#model-results').textContent='没有匹配的模型，可修改搜索词或手动填写。';
   $('#model-page-state').textContent = `第 ${state.modelCatalog.page + 1} / ${pages} 页`;
   $('#model-page-prev').disabled = state.modelCatalog.page === 0;
   $('#model-page-next').disabled = state.modelCatalog.page >= pages - 1;
@@ -604,54 +635,76 @@ function renderModelCatalog() {
 }
 
 function renderModelProfiles() {
+  ++capacityUI.request;
   const profiles = state.settings?.modelProfiles || [];
   if (!state.editingModelProfileId) state.editingModelProfileId = state.settings?.activeModelProfileId || profiles[0]?.id;
-  $('#model-profile-tabs').innerHTML = profiles.map((profile) => `<button class="profile-tab ${profile.id === state.editingModelProfileId ? 'active' : ''}" data-profile-id="${escapeHtml(profile.id)}"><span>${escapeHtml(profile.name)}</span><small>${escapeHtml(profile.model || '未设置模型')}</small></button>`).join('');
+  $('#model-profile-tabs').innerHTML = profiles.map((profile) => `<button class="profile-tab ${profile.id === state.editingModelProfileId ? 'active' : ''}" data-profile-id="${escapeHtml(profile.id)}" type="button"><span class="profile-tab-heading"><strong>${escapeHtml(profile.name)}</strong>${profile.id===state.settings.activeModelProfileId?'<b class="profile-current">使用中</b>':''}</span><small>${escapeHtml(profile.model || '未选择模型')}</small></button>`).join('');
   document.querySelectorAll('.profile-tab').forEach((node) => node.addEventListener('click', () => {
+    if(node.dataset.profileId===state.editingModelProfileId){showAPIKind('text');return;}
+    if(!canLeaveModelProfile())return;
     state.editingModelProfileId = node.dataset.profileId;
     renderModelProfiles();
+    showAPIKind('text');
   }));
   const profile = currentModelProfile();
   if (!profile) return;
   resetModelCatalog();
   $('#model-name').value = profile.name || '';
   $('#model-provider').value = profile.provider || 'openai-compatible';
+  $('#model-protocol').value=profile.protocol||'chat';
   $('#model-base-url').value = profile.baseUrl || '';
   $('#model-id').value = profile.model || '';
+  renderCapacity(profile.limits);
   $('#model-api-key').value = '';
+  $('#model-api-key').type='password';
+  settingsUI.textDirty=false;$('#model-edit-status').textContent='';
+  updateAPISettingsSummary();hideSettingKeys();
+  showAPIKind(settingsUI.kind);
   $('#model-key-state').textContent = profile.hasApiKey ? 'API Key 已使用 Windows 安全存储加密。' : '尚未保存 API Key。';
   $('#delete-model-profile').disabled = Boolean(profile.builtIn);
   $('#delete-model-profile').title = profile.builtIn ? 'OpenAI 与 Anthropic 默认配置不可删除' : '';
 }
 
 function addModelProfile() {
+  if(!canLeaveModelProfile())return;
   const id = `profile-${Date.now()}`;
   state.settings.modelProfiles.push({ id, name: '新模型配置', provider: 'openai-compatible', baseUrl: '', model: '', hasApiKey: false });
   state.editingModelProfileId = id;
   renderModelProfiles();
+  showAPIKind('text');$('#model-name').focus();
 }
 
 async function saveModelProfile() {
   const profile = currentModelProfile();
   if (!profile) return;
-  state.settings = await window.qqInsight.saveSettings({
+  ++capacityUI.request;
+  const edit=settingsUI.textVersion;
+  const saved = await window.qqInsight.saveSettings({
     modelProfile: {
       id: profile.id,
       name: $('#model-name').value,
       provider: $('#model-provider').value,
+      protocol:$('#model-protocol').value,
       baseUrl: $('#model-base-url').value,
       model: $('#model-id').value,
       apiKey: $('#model-api-key').value,
+      limits: capacityFields(),
     },
   });
-  state.editingModelProfileId = state.settings.activeModelProfileId;
-  renderModelProfiles();
+  const current=currentModelProfile(),unchanged=state.editingModelProfileId===profile.id&&edit===settingsUI.textVersion;
+  state.settings=saved;
+  if(current&&!state.settings.modelProfiles.some(item=>item.id===current.id))state.settings.modelProfiles.push(current);
+  if(unchanged){state.editingModelProfileId=state.settings.activeModelProfileId;renderModelProfiles();$('#model-edit-status').textContent='已保存并用于分析，输出额度已同步';}
+  else $('#model-edit-status').textContent='提交的配置已保存；当前输入还有未保存修改。';
+  loadAIBudget();
   toast('模型配置已保存并设为当前配置。', 'success');
 }
 
 async function discoverModelOptions() {
   const profile = currentModelProfile();
   if (!profile) return;
+  const selected={id:profile.id,provider:$('#model-provider').value,url:$('#model-base-url').value,key:$('#model-api-key').value};
+  const current=()=>currentModelProfile()?.id===selected.id&&$('#model-provider').value===selected.provider&&$('#model-base-url').value===selected.url&&$('#model-api-key').value===selected.key;
   const button = $('#discover-models');
   button.disabled = true;
   button.textContent = '正在读取…';
@@ -663,18 +716,22 @@ async function discoverModelOptions() {
       baseUrl: $('#model-base-url').value,
       apiKey: $('#model-api-key').value,
     });
+    if(!current())return;
     $('#model-options').innerHTML = result.models.map((model) => `<option value="${escapeHtml(model)}"></option>`).join('');
-    state.modelCatalog = { profileId: profile.id, models: result.models, page: 0 };
+    state.modelCatalog = { profileId: profile.id, models: result.models, capabilities:result.capabilities,baseUrl:$('#model-base-url').value,provider:$('#model-provider').value, page: 0 };
     if (!$('#model-id').value && result.models.length === 1) $('#model-id').value = result.models[0];
     renderModelCatalog();
+    await refreshModelLimits();
+    if(!current())return;
     $('#model-key-state').textContent = `已读取 ${formatNumber(result.models.length)} 个可用模型，请在“模型名称”中选择。`;
     toast(`已读取 ${formatNumber(result.models.length)} 个模型。`, 'success');
   } catch (error) {
+    if(!current())return;
     $('#model-key-state').textContent = errorMessage(error);
     toast(errorMessage(error), 'error');
   } finally {
     button.disabled = false;
-    button.textContent = '读取可用模型';
+    button.textContent = '读取模型';
   }
 }
 
@@ -724,6 +781,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   $('#sidebar-scan').addEventListener('click', () => discoverSources());
   $('#save-account').addEventListener('click', saveAccountSettings);
   $('#cancel-decrypt').addEventListener('click', cancelDecrypt);
+  let decryptBackdropDown=false;
+  $('#decrypt-modal').addEventListener('pointerdown',event=>{decryptBackdropDown=event.target===$('#decrypt-modal');});
+  $('#decrypt-modal').addEventListener('pointerup',event=>{decryptBackdropDown=decryptBackdropDown&&event.target===$('#decrypt-modal');});
+  $('#decrypt-modal').addEventListener('pointercancel',()=>{decryptBackdropDown=false;});
+  $('#decrypt-modal').addEventListener('click',event=>{if(decryptBackdropDown&&event.target===$('#decrypt-modal'))$('#cancel-decrypt').click();decryptBackdropDown=false;});
   $('#confirm-decrypt').addEventListener('click', confirmDecrypt);
   let conversationSearchTimer;
   $('#conversation-search').addEventListener('input', () => {
@@ -752,7 +814,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadMessages(state.messagePage + 1);
   });
   $('#add-model-profile').addEventListener('click', addModelProfile);
-  $('#save-model-profile').addEventListener('click', saveModelProfile);
+  $('#save-model-profile').addEventListener('click',()=>saveModelProfile().catch(error=>toast(errorMessage(error),'error')));
   $('#discover-models').addEventListener('click', discoverModelOptions);
   $('#model-provider').addEventListener('change', applyProviderDefault);
   $('#model-id').addEventListener('input', renderModelCatalog);

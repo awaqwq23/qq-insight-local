@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { configurationFingerprint } = require('./model-capabilities');
+const {limitsFor,validateLimits}=require('./model-limits');
 
 const DEFAULTS = {
   version: 3,
@@ -103,8 +104,10 @@ class SettingsStore {
         provider: profile.provider,
         baseUrl: profile.baseUrl,
         model: profile.model,
+        protocol:profile.protocol||'chat',
         hasApiKey: Boolean(profile.apiKeyEncrypted),
         builtIn: Boolean(profile.builtIn),
+        limits: limitsFor(profile),
       })),
     };
   }
@@ -142,9 +145,13 @@ class SettingsStore {
         provider: String(raw.provider || 'openai-compatible').slice(0, 40),
         baseUrl: this.validateBaseUrl(raw.baseUrl),
         model: String(raw.model || '').trim().slice(0, 160),
+        protocol:raw.protocol===undefined?(existing.protocol||'chat'):raw.protocol,
       };
+      if(!['chat','responses'].includes(profile.protocol))throw new Error('文字模型协议无效。');
       if (raw.clearApiKey) profile.apiKeyEncrypted = '';
       if (typeof raw.apiKey === 'string' && raw.apiKey.length) profile.apiKeyEncrypted = this.encrypt(raw.apiKey);
+      if(configurationFingerprint(existing)!==configurationFingerprint(profile))delete profile.limits;
+      if(raw.limits)profile.limits={...profile.limits,...validateLimits(raw.limits)};
       const index = this.data.modelProfiles.findIndex((item) => item.id === id);
       if (index >= 0) this.data.modelProfiles[index] = profile;
       else this.data.modelProfiles.push(profile);
@@ -184,6 +191,15 @@ class SettingsStore {
   }
 
   getMediaApiKey(kind) {return this.decrypt(this.data.mediaProfiles[kind]?.apiKeyEncrypted||'');}
+  recordCapacityTest(id,fingerprint,result,tpm) {
+    const profile=this.data.modelProfiles.find(p=>p.id===id);
+    if(profile&&configurationFingerprint(profile)===fingerprint){
+      profile.limits={...profile.limits,test:result};
+      if(result.reported_context_tokens)Object.assign(profile.limits,{context_tokens:result.reported_context_tokens,source:'测试时接口报告的上下文限制',basis:'reported'});
+      if(tpm)profile.limits.tpm_tokens=tpm;
+      this.persist();
+    }
+  }
   recordMediaTest(kind,fingerprint,result) {
     const profile=this.data.mediaProfiles[kind];
     if(configurationFingerprint(profile)===fingerprint){profile.test={fingerprint,...result,at:new Date().toISOString()};this.persist();}

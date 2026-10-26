@@ -20,6 +20,8 @@ app.whenReady().then(async()=>{
   assert.match(await js(`return $('#ai-usage-body').textContent`),/费用未知/);
   assert.match(await js(`return $('#ai-usage-body').textContent`),/未返回/);
   assert.match(await js(`return $('#ai-usage-body').textContent`),/0.002000 CNY/);
+  assert.match(await js(`return priceDescription({basis:'official',provider:'DeepSeek',region:'官方人民币价',unit:'token',currency:'CNY',input_price:9,output_price:27,cached_input_price:0.3,time_schedule:'deepseek_beijing',off_peak:{input_price:4.5,output_price:13.5},source:'https://example.test',reference_only:true,verified_at:'2026-10-13'});`),/非服务商实际账单/);
+  assert.match(await js(`return jobCost([],{cost_totals:{CNY:0.1},unknown_price_calls:0});`),/估算/);
   let models=await js(`await discoverMedia('vision');return [...$('#media-vision-candidates').options].map(o=>o.value);`);
   assert.deepEqual(models,['vision-model']);
   models=await js(`$('#media-vision-show-all').checked=true;renderMediaCandidates('vision');return $('#media-vision-candidates').options.length;`);assert.equal(models,3);
@@ -29,9 +31,9 @@ app.whenReady().then(async()=>{
   assert.equal(await js(`return $('#ai-usage-prev').disabled;`),false);
   assert.equal(await js(`return qa.saved.every(v=>!!v.mediaProfile&&!v.modelProfile);`),true);
   await js(`$('#transcribe-file').click();`);await new Promise(r=>setTimeout(r,100));assert.equal(await js(`return $('#transcription-result').value;`),'合成转写文本');
-  await js(`$('#media-model-settings').scrollIntoView({block:'start'});document.getAnimations().forEach(a=>a.finish());`);
+  await js(`showSettingsPage('models');showAPIKind('vision');$('#media-model-settings').scrollIntoView({block:'start'});document.getAnimations().forEach(a=>a.finish());`);
   await new Promise(r=>setTimeout(r,200));fs.writeFileSync(path.join(__dirname,'../build/qa/media-settings.png'),(await win.webContents.capturePage()).toPNG());
-  await js(`$('#ai-usage-body').scrollIntoView({block:'center'});`);await new Promise(r=>setTimeout(r,200));fs.writeFileSync(path.join(__dirname,'../build/qa/usage-ledger.png'),(await win.webContents.capturePage()).toPNG());
+  await js(`showSettingsPage('usage');$('#ai-usage-body').scrollIntoView({block:'center'});`);await new Promise(r=>setTimeout(r,200));fs.writeFileSync(path.join(__dirname,'../build/qa/usage-ledger.png'),(await win.webContents.capturePage()).toPNG());
   console.log('Media renderer passed: independent forms, capability filtering, semantic tests, transcription, usage/unknown values, pagination.');
  }catch(error){console.error(error);process.exitCode=1;}finally{win.destroy();app.exit(process.exitCode||0);}
 });

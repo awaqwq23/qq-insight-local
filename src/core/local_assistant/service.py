@@ -19,12 +19,16 @@ from .storage import Storage
 from .archive import TransferError, export_database, import_database
 
 
-PROJECTION_VERSION = 5
+PROJECTION_VERSION = 7
 
 
 from .errors import CoreError
 from .workspace import WorkspaceFeatures
+from .roster import export_roster, roster_scope
+from .member_cache import import_cache, cache_info
 from .ai import GroupAI
+from .workspace_agent import WorkspaceAgent
+from .chat_memory import ChatMemory
 from .media import MediaStore, merge_media
 
 
@@ -87,13 +91,15 @@ class AssistantService(WorkspaceFeatures):
         self.qq_sources = QQSourceAdapter(self.data_dir, self.storage)
         self.media_store = MediaStore(self)
         self.ai = GroupAI(self)
+        self.chat_memory = ChatMemory(self)
+        self.workspace_agent = WorkspaceAgent(self)
 
     def health(self) -> dict[str, Any]:
         with self.storage.connect() as conn:
             messages = conn.execute("SELECT count(*) FROM messages").fetchone()[0]
         return {
             "name": "QQ Insight local core",
-            "version": "0.5.0-rel",
+            "version": "0.18.1-rel",
             "mode": "offline_rules_only",
             "message_count": messages,
             "capabilities": {"qq": True, "wechat": False, "sqlcipher": self.qq_sources.can_decrypt},
@@ -117,6 +123,15 @@ class AssistantService(WorkspaceFeatures):
             raise CoreError(exc.code, str(exc)) from exc
         except (OSError, sqlite3.Error, ValueError, TypeError) as exc:
             raise CoreError("EXPORT_FAILED", "导出失败，请检查目标目录权限和剩余空间。已有文件未被覆盖。") from exc
+
+    def roster_scope(self, account_id, conversation_id, platform='qq'):
+        return roster_scope(self, account_id, conversation_id, platform)
+
+    def member_cache_info(self, account_id, conversation_id, platform='qq'):
+        return cache_info(self, account_id, conversation_id, platform)
+
+    def export_roster(self, path, account_id, kind='groups', conversation_id='', platform='qq', online=None, cache_stamp=None):
+        return export_roster(self, path, account_id, kind, conversation_id, platform, online, cache_stamp)
 
     def manual_import(self, path: str, format: str, account_id: str = "", database_key: str = "",
                       import_mode: str = "incremental") -> dict[str, Any]:
@@ -333,7 +348,7 @@ class AssistantService(WorkspaceFeatures):
             for identity in (group["group_uid"], group["group_qq"], group["identity_key"]):
                 if identity:
                     groups[identity] = group
-        columns = "id,conversation_id,source_key,sent_at,direction,raw_direction,sender_key,text,content_kind,segment_count,parse_status,raw_blob,outer_type,subtype,platform,account_id,sender_qq,sender_name,media_json,source_digest,sync_key,reply_json"
+        columns = "id,conversation_id,source_key,sent_at,direction,raw_direction,sender_key,text,content_kind,segment_count,parse_status,raw_blob,outer_type,subtype,platform,account_id,sender_qq,sender_name,media_json,source_digest,sync_key,reply_json,sender_nickname,sender_card"
         updates = ",".join(f"{column}=excluded.{column}" for column in columns.split(",") if column not in ("id", "source_key"))
         differs = " OR ".join(f"messages.{column} IS NOT excluded.{column}" for column in columns.split(",") if column not in ("id", "source_key"))
         message_sql = f"INSERT INTO messages({columns}) VALUES({','.join('?' for _ in columns.split(','))}) ON CONFLICT(source_key) DO UPDATE SET {updates} WHERE {differs}"
@@ -423,7 +438,8 @@ class AssistantService(WorkspaceFeatures):
                     sender_qq = sender_qq or old['sender_qq']
                 message_batch.append((message_id, conversation_id, key, int(row["c40050"] or 0), _direction(direction), direction, sender_key,
                                 str(details["text"]), str(details["content_kind"]), int(details["segment_count"]), "partial" if int(details["semantic_status"]) >= 0 else "unknown",
-                                raw_blob, row["c40011"], row["c40012"], platform, account_id, sender_qq, sender_name, json.dumps(details["media"], ensure_ascii=False), digest, sync_key, json.dumps(details.get("replies",[]),ensure_ascii=False)))
+                                raw_blob, row["c40011"], row["c40012"], platform, account_id, sender_qq, sender_name, json.dumps(details["media"], ensure_ascii=False), digest, sync_key, json.dumps(details.get("replies",[]),ensure_ascii=False),
+                                str(row['c40093'] or '').strip() if kind == 'group' else '', str(row['c40090'] or '').strip() if kind == 'group' else ''))
                 fts_batch.append((message_id, str(details["text"])))
                 if changed:
                     change_batch.append((platform, account_id, message_id, "added" if previous is None else "updated", imported_at))
@@ -511,9 +527,10 @@ class AssistantService(WorkspaceFeatures):
             if not {"60001", "60007"}.issubset(columns):
                 raise CoreError("SOURCE_UNSUPPORTED", "群资料字段不受支持，本次更新已回滚。")
             remark_expr = '"60026"' if "60026" in columns else "NULL"
-            rows = source.execute(f'SELECT "60001" AS group_qq,"60007" AS name,{remark_expr} AS remark FROM "group_detail_info_ver1"')
             count = 0
             with (nullcontext(target) if target is not None else self.storage.connect()) as target:
+                import_cache(source, target, account_id)
+                rows = source.execute(f'SELECT "60001" AS group_qq,"60007" AS name,{remark_expr} AS remark FROM "group_detail_info_ver1"')
                 for row in rows:
                     group_qq = str(row["group_qq"] or "")
                     if not group_qq:
@@ -660,7 +677,7 @@ class AssistantService(WorkspaceFeatures):
         if sender.strip():
             where += " AND (m.sender_name LIKE ? ESCAPE '!' OR m.sender_qq LIKE ? ESCAPE '!' OR m.sender_key LIKE ? ESCAPE '!')"
             params.extend([sender_pattern] * 3)
-        if direction:
+        if direction and direction not in ('incoming','outgoing'):
             where += " AND m.direction=?"
             params.append(direction)
         point = self._page_cursor(cursor, "sent_at")
@@ -668,6 +685,15 @@ class AssistantService(WorkspaceFeatures):
             where += f" AND (m.sent_at,m.id){comparison}(?,?)"
             params.extend(point)
         with self.storage.connect() as conn:
+            if direction in ('incoming','outgoing'):
+                accounts=[account_id] if account_id else [r[0] for r in conn.execute('SELECT DISTINCT account_id FROM conversations WHERE platform=?',(platform,))]
+                clauses=["m.direction='outgoing'"];self_params=[]
+                for account in accounts:
+                    ids=sorted(self._self_ids(conn,account));marks=','.join('?' for _ in ids)
+                    clauses.append(f'(m.account_id=? AND (m.sender_qq IN ({marks}) OR m.sender_key IN ({marks})))');self_params.extend([account,*ids,*ids])
+                predicate='('+' OR '.join(clauses)+')'
+                where+=(" AND m.direction<>'system' AND " if direction=='outgoing' else " AND m.direction='incoming' AND NOT ")+predicate
+                params.extend(self_params)
             rows = conn.execute(f"SELECT m.*,c.title FROM messages m JOIN conversations c ON c.id=m.conversation_id WHERE {where} ORDER BY m.sent_at {sort},m.id {sort} LIMIT ?", (*params,limit+1)).fetchall()
             more = len(rows) > limit
             items = self._message_items(conn, rows[:limit])
@@ -679,9 +705,10 @@ class AssistantService(WorkspaceFeatures):
         if not isinstance(role_text, str): raise CoreError('INVALID_PARAMS', '角色应为文本。')
         role_text = role_text.strip()[:1000]
         if conversation_id:
-            self._conversation(conversation_id, account_id, platform)
+            conversation=self._conversation(conversation_id, account_id, platform)
             with self.storage.connect() as conn:
                 conn.execute('INSERT INTO conversation_preferences VALUES(?,?,?) ON CONFLICT(conversation_id) DO UPDATE SET role_text=excluded.role_text,updated_at=excluded.updated_at', (conversation_id, role_text, datetime.now(timezone.utc).isoformat()))
+            if conversation['kind']=='group':self.ai.save_group(conversation_id,account_id,{'role':role_text},platform)
             return self.get_profile(conversation_id, account_id, platform)
         with self.storage.connect() as conn:
             conn.execute("INSERT INTO profile(id,role_text,updated_at) VALUES(1,?,?) ON CONFLICT(id) DO UPDATE SET role_text=excluded.role_text,updated_at=excluded.updated_at", (role_text, datetime.now(timezone.utc).isoformat()))

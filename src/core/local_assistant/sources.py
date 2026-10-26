@@ -30,7 +30,7 @@ class QQSourceAdapter:
     source_names = {"nt_msg.db", "nt_msg_plain.db"}
     companion_tables = {
         "profile_info.db": ("profile_info_v6",),
-        "group_info.db": ("group_detail_info_ver1",),
+        "group_info.db": ("group_detail_info_ver1", "group_member3"),
         "recent_contact.db": ("recent_contact_v3_table",),
     }
     skip_dirs = {"node_modules", ".git", ".venv", "cache", "temp", "tmp", "logs"}

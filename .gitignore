@@ -10,6 +10,8 @@
 *.mhtml
 .env
 .env.*
+# Explicit local model credential file; never package or submit.
+/.env.local
 !.env.example
 **/.venv/
 **/__pycache__/
@@ -21,3 +23,5 @@ runtime/
 staging/
 media/
 logs/
+# Local coursework extraction, audit logs, and temporary artifacts.
+/tmp/

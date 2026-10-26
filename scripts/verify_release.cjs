@@ -21,5 +21,5 @@ walk('src/desktop');
 assert.deepEqual(fs.readFileSync(path.join(root, 'build/core/qq-insight-core.exe')), fs.readFileSync(path.join(root, 'release/win-unpacked/resources/core/qq-insight-core.exe')));
 const name = `QQ-Insight-${sourcePackage.version}-portable.exe`;
 const hash = crypto.createHash('sha256').update(fs.readFileSync(path.join(root, 'release', name))).digest('hex');
-fs.writeFileSync(path.join(root, 'release/SHA256.txt'), `${hash}  ${name}\n`, 'utf8');
+assert.ok(fs.readFileSync(path.join(root, 'release/SHA256.txt'), 'utf8').includes(`${hash}  ${name}`), 'postdist checksums include current release');
 console.log(`Verified ${sourcePackage.version}: all desktop files and packaged core match; SHA256 ${hash}`);

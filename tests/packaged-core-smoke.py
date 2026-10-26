@@ -53,7 +53,7 @@ with tempfile.TemporaryDirectory() as folder:
     assert len(results[12]['items']) == 40
     assert results[13]['pinned']
     assert results[14]['role_text'] == 'synthetic-role'
-    assert len(results[15]['items']) == 7
+    assert len(results[15]['items']) == 8
     assert results[16]['daily_used'] == 0
     assert any(line.get("method") == "source.progress" for line in lines)
 print("Packaged core stdio passed: SQLCipher available, incremental/full modes, progress, pagination, account isolation, manual import, archive roundtrip")

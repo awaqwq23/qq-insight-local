@@ -1,5 +1,7 @@
 const { generate, modelDescriptor } = require('./model-gateway');
 const {mediaConfiguration,meteredCall}=require('./media-gateway');
+const {waitForTokens}=require('./model-rate-limit');
+const {compressContext,needsCompression}=require('./context-memory');
 
 function createAICoordinator({ rpc, settings, progress = () => {}, generateImpl = generate }) {
   let active = null;
@@ -18,10 +20,14 @@ function createAICoordinator({ rpc, settings, progress = () => {}, generateImpl 
     const controller = new AbortController();
     active = { input, controller, jobId: '' };
     let attempt = '';let textSent=false;
+    const corrections=new Map();
+    const rateRetries=new Map();
     try {
       const group = await rpc('group.get', { conversation_id: input.conversation_id, account_id: input.account_id });
       const vision=group.images?mediaConfiguration(settings(),'vision'):null;
-      const model = {...modelDescriptor(profile),routes:{vision:vision?modelDescriptor(vision.profile):null}};
+      const visionDescriptor=vision?modelDescriptor(vision.profile):null;
+      if(visionDescriptor)delete visionDescriptor.limits;
+      const model = {...modelDescriptor(profile),routes:{vision:visionDescriptor}};
       const prepared = input.job_id
         ? await rpc('ai.resume', { job_id: input.job_id, conversation_id: input.conversation_id, account_id: input.account_id, model })
         : await rpc('ai.prepare', { conversation_id: input.conversation_id, account_id: input.account_id, platform: 'qq', feature: input.feature, options: input.options || {}, model });
@@ -38,7 +44,7 @@ function createAICoordinator({ rpc, settings, progress = () => {}, generateImpl 
           return result;
         }
         attempt = request.attempt;textSent=false;
-        emit(`正在分析第 ${request.index + 1} / ${request.total} 段…`);
+        emit(request.stage==='reduce'?`正在汇总第 ${request.level} 层摘要（${request.index + 1} / ${request.total}）…`:`正在分析第 ${request.index + 1} / ${request.total} 段…`);
         const observations=[];
         for(const picture of request.images||[]){
           const key=picture.message_id+':'+picture.media_index;
@@ -48,12 +54,56 @@ function createAICoordinator({ rpc, settings, progress = () => {}, generateImpl 
             description=response.result.slice(0,6000);
             await rpc('ai.media.save',{job_id:active.jobId,index:request.index,key,text:description});
           }
-          observations.push({message_id:picture.message_id,media_index:picture.media_index,description,source:'独立识图模型，可能有误，请结合原图'});
+          const boundedDescription=Buffer.from(description).subarray(0,6000).toString('utf8');
+          observations.push({message_id:request.evidence_aliases?.[picture.message_id]||picture.message_id,media_index:picture.media_index,description:boundedDescription,source:'独立识图模型，可能有误，请结合原图'});
         }
         const material=JSON.parse(request.user);material.media_observations=observations;
+        if(request.stage==='map'){
+          const context=await rpc('ai.context',{job_id:active.jobId,attempt});
+          if(!context.skip){
+            const reports=[...context.summaries];
+            let originals=new Set(context.references);
+            if(context.material.messages.length&&needsCompression(context.material)){
+              const compressed=await compressContext({rpc,scope:{job_id:active.jobId},material:{...context.material,media_observations:observations},profile,apiKey,signal:controller.signal,generateImpl,emit,chunk_idx:request.index,commit:result=>rpc('ai.context',{job_id:active.jobId,attempt,references:context.references,result})});
+              if(Buffer.byteLength(JSON.stringify(compressed.context))<Buffer.byteLength(JSON.stringify(context.material))){reports.push(compressed.context);originals=new Set(compressed.uncompressed_references||[]);}
+            }
+            material.partial_reports=reports;
+            material.messages=material.messages.map(row=>originals.has(Array.isArray(row)?row[0]:row.id)?row:Array.isArray(row)?[...row.slice(0,4),'',row[5]]:{...row,text:'',replies:[]});
+            material.instruction+=' 根据短原文及partial_reports完成本次功能；已有摘要覆盖的正文用空串代替，不代表原始消息为空。缺少独立摘要的部分保留原文。摘要不算新的独立证据，细节缺失标待核实。';
+            emit(`上下文已准备：复用 ${context.reused_messages} 条，补充 ${context.references.length} 条，正在执行分析…`);
+          }
+        }
+        const user=JSON.stringify(material);
+        const system=request.system+(corrections.has(request.index)?'\n上次校验失败：'+corrections.get(request.index)+' 每项只引用当前messages中的id，逐字复制。群记忆的conversation_id必须对应这些证据自己的群；跨群综合结论放items，不拆写成各群事实。无法支持的记忆省略，无有效来源的条目删除。':'' );
+        const tokens=Buffer.byteLength(system)+Buffer.byteLength(user)+512+request.max_tokens;
+        if(tokens>model.limits.context_tokens)throw Object.assign(new Error('本段含图片描述的完整请求超过上下文安全额度，请降低读取范围。'),{knownNotSent:true});
+        await waitForTokens(profile,tokens,controller.signal,emit);
         textSent=true;
-        const response = await generateImpl({ profile, apiKey, request:{...request,images:[],user:JSON.stringify(material)}, signal: controller.signal });
-        await rpc('ai.commit', { job_id: active.jobId, attempt, ...response });
+        let response;
+        try{response = await generateImpl({ profile, apiKey, request:{...request,images:[],user,system,json_mode:true}, signal: controller.signal });}
+        catch(error){
+          const retries=rateRetries.get(request.index)||0;
+          if(error.code==='MODEL_RATE_LIMIT'&&error.rateKind!=='quota'&&error.knownNotSent===true&&retries<2&&!controller.signal.aborted){
+            rateRetries.set(request.index,retries+1);
+            await rpc('ai.fail',{job_id:active.jobId,attempt,known_not_sent:true,message:'服务限流，等待恢复后继续本段。'});attempt='';textSent=false;
+            if(error.tpmLimit){profile.limits={...profile.limits,tpm_tokens:error.tpmLimit};model.limits={...model.limits,tpm_tokens:error.tpmLimit};}
+            else model.limits={...model.limits,input_tokens:Math.min(model.limits.input_tokens||10000000,Math.max(16384,Math.floor((tokens-request.max_tokens)*.6)))};
+            const delay=Math.min(300000,Math.max(1000,error.retryAfterMs||60000));emit(`接口限流${({tpm:'（Token频率）',rpm:'（请求频率）',quota:'（服务额度）',context:'（服务提到上下文）',concurrency:'（并发）',content:'（服务内容检查）'})[error.rateKind]||''}，等待 ${Math.ceil(delay/1000)} 秒后继续本段（${retries+1}/2）…`);
+            await new Promise((resolve,reject)=>{const aborted=()=>{clearTimeout(timer);reject(Object.assign(new Error('已取消分析。'),{code:'AI_CANCELLED'}));};const timer=setTimeout(()=>{controller.signal.removeEventListener('abort',aborted);resolve();},delay);if(controller.signal.aborted)aborted();else controller.signal.addEventListener('abort',aborted,{once:true});});
+            await rpc('ai.resume',{job_id:active.jobId,conversation_id:input.conversation_id,account_id:input.account_id,model});continue;
+          }
+          throw error;
+        }
+        try{await rpc('ai.commit', { job_id: active.jobId, attempt, ...response });}
+        catch(error){
+          if(['AI_EVIDENCE_INVALID','AI_OUTPUT_INVALID'].includes(error.code)&&!corrections.has(request.index)&&!controller.signal.aborted){
+            // Core already charged and rejected this attempt. Request a fresh result; never repair IDs locally.
+            corrections.set(request.index,error.message);attempt='';textSent=false;
+            await rpc('ai.resume',{job_id:active.jobId,conversation_id:input.conversation_id,account_id:input.account_id,model});
+            emit('本段结果未通过校验，重新读取一次；已完成分块保留。');continue;
+          }
+          throw error;
+        }
         attempt = '';
       }
     } catch (error) {

@@ -114,14 +114,14 @@ class CoreTest(unittest.TestCase):
 
             service = AssistantService(root / "data")
             result = service.import_snapshot(
-                str(source), "qq-820288706", companion_paths={
+                str(source), "qq-900000001", companion_paths={
                     "profile_info.db": profile,
                     "group_info.db": group,
                 },
             )
             self.assertEqual(result["metadata"]["profiles"], 1)
             self.assertEqual(result["metadata"]["groups"], 1)
-            conversations = service.list_conversations(account_id="qq-820288706")["items"]
+            conversations = service.list_conversations(account_id="qq-900000001")["items"]
             private = next(item for item in conversations if item["kind"] == "c2c")
             group_chat = next(item for item in conversations if item["kind"] == "group")
             self.assertIn("好友备注", private["title"])

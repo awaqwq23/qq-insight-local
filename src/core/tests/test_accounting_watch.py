@@ -44,7 +44,7 @@ class AccountingWatchTest(unittest.TestCase):
             request=self.ai.next_chunk(prepared['job_id'])
             if request['done']:break
             material=json.loads(request['user']);target=material['request']['watch_target'];targets.append(target)
-            self.assertTrue(all(target in (message['sender_qq'],message['sender_key']) for message in material['messages']))
+            self.assertTrue(all(target in (message['sender_qq'],message['sender_key']) for message in [test_ai.wire_message(material,row) for row in material['messages']]))
             self.ai.commit_chunk(prepared['job_id'],request['attempt'],self.output(request,target),{'input_tokens':10,'output_tokens':20})
         self.ai.finish(prepared['job_id'])
         history=self.ai.history('group-a','a',feature='watch')

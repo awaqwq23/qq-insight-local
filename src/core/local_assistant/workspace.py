@@ -5,6 +5,13 @@ from .errors import CoreError
 
 
 class WorkspaceFeatures:
+    def _self_ids(self, conn, account):
+        profile=self.chat_memory.self_profile(account)
+        values={account,profile['qq'],profile['uid']}-{''}
+        pairs=conn.execute('SELECT qq,uid FROM qq_profiles WHERE account_id=? AND (qq=? OR uid=?)',(account,profile['qq'] or account,profile['uid'] or account)).fetchall()
+        values.update(v for pair in pairs for v in pair if v)
+        return values
+
     def _message(self, message_id, account_id, platform='qq'):
         if not account_id: raise CoreError('INVALID_PARAMS', '请先选择账号。')
         with self.storage.connect() as conn:
@@ -24,14 +31,24 @@ class WorkspaceFeatures:
         if not rows: return []
         ids = [row['id'] for row in rows]
         favorites = {(row[0], row[1]) for row in conn.execute(f"SELECT message_id,media_index FROM favorites WHERE message_id IN ({','.join('?' for _ in ids)})", ids)}
+        compressed={r['message_id']:r for r in conn.execute(f"SELECT message_id,content_hash,updated_at FROM ai_message_memory WHERE message_id IN ({','.join('?' for _ in ids)})",ids)}
         items = []
+        identities={}
         for row in rows:
             item = {key: row[key] for key in ('id','conversation_id','sent_at','direction','sender_key','sender_qq','sender_name','text','content_kind','parse_status','title')}
+            account=row['account_id']
+            if account not in identities:identities[account]=self._self_ids(conn,account)
+            item['is_self']=item['direction']!='system' and (item['direction']=='outgoing' or bool({item['sender_qq'],item['sender_key']}&identities[account]))
+            if item['is_self'] and item['direction']!='system':item['direction']='outgoing'
             try: item['media'] = json.loads(row['media_json'] or '[]')
             except (ValueError, TypeError): item['media'] = []
             try: item['replies'] = json.loads(row['reply_json'] or '[]')
             except (ValueError, TypeError, IndexError): item['replies'] = []
             item['favorite'] = (item['id'], -1) in favorites
+            saved=compressed.get(item['id'])
+            if saved and self.chat_memory.enabled(conn,item['conversation_id']):
+                from .ai import projection,MESSAGE_COLUMNS
+                if projection({k:row[k] for k in MESSAGE_COLUMNS.split(',')})['content_hash']==saved['content_hash']:item['memory']={'compressed':True,'updated_at':saved['updated_at']}
             for index, media in enumerate(item['media']): media['favorite'] = (item['id'], index) in favorites
             items.append(item)
         return items

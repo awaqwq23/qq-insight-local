@@ -135,6 +135,7 @@ class WorkspaceTest(unittest.TestCase):
     def test_old_backup_without_workspace_tables_and_fields(self):
         backup=self.root/'legacy-v1.db';self.service.export_archive(str(backup))
         conn=sqlite3.connect(backup)
+        conn.execute('DROP TRIGGER IF EXISTS invalidate_message_memory')
         for table in ('message_media','media_assets','favorites','conversation_preferences','media_roots','message_aliases','message_variants'):
             conn.execute(f'DROP TABLE {table}')
         conn.execute('DROP INDEX idx_messages_sync')

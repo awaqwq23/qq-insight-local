@@ -4,13 +4,18 @@ const path = require('node:path');
 const readline = require('node:readline');
 
 const { SettingsStore } = require('./settings-store');
+const {createOutputSettings}=require('./output-settings');
 const { extractNtqqDatabaseKey } = require('./key-extractor');
 const { discoverModels } = require('./model-discovery');
-const { officialPrice }=require('./official-pricing');
+const {limitsFor}=require('./model-limits');
+const {testCapacity}=require('./model-capacity-test');
+const { officialPrice,officialPriceCatalog }=require('./official-pricing');
 const {testMedia,mediaConfiguration,meteredCall}=require('./media-gateway');
 const fs=require('node:fs');
 const { registerAI } = require('./ai-coordinator');
+const { registerWorkspaceAgent } = require('./workspace-agent');
 const { registerDatabaseTransfer } = require('./database-transfer');
+const { registerRosterExport } = require('./roster-export');
 const { stopQQ, prepareQQDatabase } = require('./qq-session');
 
 let mainWindow;
@@ -21,6 +26,7 @@ const discoveredSources = new Map();
 let settingsStore;
 let activeSourceOperation = null;
 let aiCoordinator;
+let workspaceCoordinator;
 
 function toIpcError(error) {
   if (error instanceof Error) return error;
@@ -123,26 +129,40 @@ function createWindow() {
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   settingsStore = new SettingsStore(app, safeStorage);
   startCore();
+  await rpc('ai.pricing.apply',{catalog:officialPriceCatalog()}).catch(()=>console.warn('历史费用补算失败，已保留原记录。'));
   createWindow();
-  const rendererMethods = new Set(['system.health', 'dashboard.overview', 'conversation.list', 'message.list', 'message.search', 'insights.work_digest', 'profile.save', 'profile.get', 'message.context', 'message.repair', 'conversation.pin', 'favorite.set', 'favorite.list', 'media.read', 'media.refresh', 'ai.catalog', 'group.get', 'group.save', 'ai.history', 'ai.item.update', 'ai.budget.get', 'ai.budget.save', 'ai.usage.list']);
+  const outputSettings=createOutputSettings({store:settingsStore,rpc});
+  const rendererMethods = new Set(['system.health', 'dashboard.overview', 'conversation.list', 'message.list', 'message.search', 'insights.work_digest', 'profile.save', 'profile.get', 'message.context', 'message.repair', 'conversation.pin', 'favorite.set', 'favorite.list', 'media.read', 'media.refresh', 'ai.catalog', 'chat.settings.get', 'chat.settings.save', 'chat.memory.coverage', 'chat.memory.list', 'self.get', 'self.save', 'self.memory', 'workspace.history', 'workspace.chat.create', 'workspace.chat.list', 'workspace.chat.recent', 'workspace.chat.get', 'workspace.chat.rename', 'workspace.chat.select', 'workspace.history.delete', 'group.get', 'group.save', 'ai.history', 'ai.history.delete', 'ai.memory.list', 'ai.memory.update', 'ai.item.update', 'ai.budget.get', 'ai.budget.save', 'ai.usage.list']);
   ipcMain.handle('core:rpc', ipcSafe((_, method, params) => {
     if (!rendererMethods.has(method)) throw new Error('该操作需要通过专用入口执行。');
+    if(method==='ai.budget.save')return outputSettings.saveBudget(params?.settings);
     return rpc(method, params);
   }));
   registerDatabaseTransfer({ ipcMain, dialog, window: () => mainWindow, rpc, settings: () => settingsStore,
     getOperation: () => activeSourceOperation, setOperation: value => { activeSourceOperation = value; }, ipcSafe });
+  registerRosterExport({ ipcMain, dialog, window: () => mainWindow, rpc, ipcSafe, BrowserWindow });
   ipcMain.handle('media:open-favorites', ipcSafe(async () => {
     const directory = path.join(app.getPath('userData'), 'data', 'favorites', 'media');
     require('node:fs').mkdirSync(directory, { recursive: true });
     const error = await shell.openPath(directory);
     if (error) throw new Error(error);
   }));
-  aiCoordinator = registerAI({ ipcMain, rpc, settings: () => settingsStore, window: () => mainWindow, ipcSafe, busy: () => Boolean(activeSourceOperation) });
+  let capacityController=null;
+  aiCoordinator = registerAI({ ipcMain, rpc, settings: () => settingsStore, window: () => mainWindow, ipcSafe, busy: () => Boolean(activeSourceOperation)||Boolean(capacityController)||Boolean(workspaceCoordinator?.status().running) });
+  workspaceCoordinator=registerWorkspaceAgent({ipcMain,rpc,settings:()=>settingsStore,window:()=>mainWindow,ipcSafe,busy:()=>Boolean(activeSourceOperation)||Boolean(capacityController)||Boolean(aiCoordinator?.status().running),dialog,shell});
   ipcMain.handle('settings:get', () => settingsStore.publicValue());
-  ipcMain.handle('settings:save', (_, input) => settingsStore.save(input));
+  ipcMain.handle('settings:save', ipcSafe((_, input) => outputSettings.saveSettings(input)));
+  ipcMain.handle('model:limits',(_,input={})=>limitsFor({provider:String(input.provider||''),baseUrl:String(input.baseUrl||''),model:String(input.model||'')}));
+  ipcMain.handle('model:cancel-capacity',()=>{capacityController?.abort();return {cancelled:Boolean(capacityController)};});
+  ipcMain.handle('model:test-capacity',ipcSafe(async(_,input={})=>{
+    if(capacityController||aiCoordinator.status().running)throw new Error('请等待当前 AI 分析或容量测试完成。');
+    capacityController=new AbortController();
+    try{return await testCapacity({store:settingsStore,rpc,profileId:input.profileId,maxMessages:input.maxMessages,maxTokens:input.maxTokens,signal:capacityController.signal,progress:message=>{if(mainWindow&&!mainWindow.isDestroyed())mainWindow.webContents.send('model:capacity-progress',{message});}});}
+    finally{capacityController=null;}
+  }));
   ipcMain.handle('model:discover', ipcSafe(async (_, input = {}) => {
     const apiKey = String(input.apiKey || '') || settingsStore.getModelApiKey(String(input.profileId || ''));
     return discoverModels({
@@ -290,6 +310,7 @@ app.whenReady().then(() => {
 });
 
 app.on('before-quit', () => {
+  workspaceCoordinator?.cancel();
   aiCoordinator?.close();
   activeSourceOperation?.controller?.abort();
   if (core && !core.killed) core.kill();
