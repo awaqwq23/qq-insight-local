@@ -1,5 +1,7 @@
 # 当前架构
 
+0.18.2-rel增加MIT自有代码许可和第三方声明。scripts/prepare-license-bundle.cjs在predist按manifest验证原文SHA256并生成build/legal，作为extraResources进入便携包；Electron原有完整Chromium声明保留。设置通过专用licenses:open IPC打开固定本地说明，不给模型或渲染层任意文件路径权限；包内实际IPC及文件一致性验证覆盖此入口。
+
 0.18.1-rel增加workspace.chat.recent，复用workspace_sessions/runs与ai_jobs按账号联表汇总主题及旧分析，过滤内部压缩和分批任务；无新表。renderer/ai-history负责分页、迟到响应防护及原session/job导航，主进程只增加此只读RPC白名单。AI聊天收紧三级导航，主题列表改为原生details菜单，正文及输入16px、减少留白；契约见src/contracts/ai-history-v1.md。
 
 Electron 主进程管理窗口、授权、模型 API、加密设置与 QQ 进程协作；界面通过受限 IPC 调用。

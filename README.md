@@ -81,3 +81,9 @@ QQ Insight 是一款 Windows 桌面工具。你可以浏览群聊和私聊，直
 - 当前主要支持 Windows QQ 本地记录，微信入口尚未接入；现有预设与工具 Agent 不等同于已经实现多角色独立协作。
 
 开发者请阅读 [PROMPT.md](PROMPT.md)；完整需求、实现状态和验证边界分别见 [需求对照](docs/requirements.md)与[验证记录](docs/verification.md)。
+
+## 许可证与致谢
+
+本项目自有代码采用 [MIT 许可证](LICENSE)。依赖、原始版权声明和实际借助的项目见[第三方组件与致谢](THIRD_PARTY_NOTICES.md)；程序内可在“设置 → 许可证与致谢”离线查看。
+
+感谢 Electron、Python、SQLite/SQLCipher、PyInstaller、electron-builder 等项目，以及提供QQ研究资料的 QQBackup 社区和界面思路参考的 CC Switch。外部 `qq-win-db-key` 助手另有非商用许可，未随本程序打包；本项目的MIT不改变第三方许可。

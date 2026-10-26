@@ -1,0 +1,138 @@
+{
+  "application": "QQ Insight",
+  "version": "0.18.2-rel",
+  "files": [
+    {
+      "file": "Electron-37.10.3.txt",
+      "project": "Electron",
+      "version": "37.10.3",
+      "source": "https://github.com/electron/electron/tree/v37.10.3",
+      "license": "MIT",
+      "scope": "runtime",
+      "sha256": "5154e165bd6c2cc0cfbcd8916498c7abab0497923bafcd5cb07673fe8480087d"
+    },
+    {
+      "file": "CPython-3.14.0.txt",
+      "project": "CPython and bundled Windows notices",
+      "version": "3.14.0",
+      "source": "https://www.python.org/downloads/release/python-3140/",
+      "license": "Python-2.0 AND bundled notices",
+      "scope": "runtime",
+      "sha256": "935cf13e19f8c31b497d20b05d73623431a226b230c3599bc30fa3348979bc68"
+    },
+    {
+      "file": "sqlcipher3-0.6.2.txt",
+      "project": "sqlcipher3",
+      "version": "0.6.2",
+      "source": "https://github.com/coleifer/sqlcipher3/tree/0.6.2",
+      "license": "Zlib (package metadata says MIT)",
+      "scope": "runtime",
+      "sha256": "d2af98975b150bf6ff5ef99785b56b4b5979024a4ab3117253f1cd777f98bad6"
+    },
+    {
+      "file": "PyInstaller-6.22.3.txt",
+      "project": "pyinstaller",
+      "version": "6.22.3",
+      "source": "https://github.com/pyinstaller/pyinstaller/tree/v6.22.3",
+      "license": "GPL-2.0-or-later WITH bootloader exception; selected Apache-2.0",
+      "scope": "build-and-bootloader",
+      "sha256": "0598064c7d2718e38d7914a7d08343b2fa008e3bea9ebba2aa7a6ffa5900dd64"
+    },
+    {
+      "file": "PyInstaller-hooks-contrib-2026.7.txt",
+      "project": "pyinstaller-hooks-contrib",
+      "version": "2026.7",
+      "source": "https://github.com/pyinstaller/pyinstaller-hooks-contrib",
+      "license": "GPL-2.0-or-later; runtime hooks Apache-2.0",
+      "scope": "build",
+      "sha256": "91d0baaff00773038e72c0a1fc9d5d2d38706b7a2b9c04f34296608f931b9cd0"
+    },
+    {
+      "file": "electron-builder-26.15.3.txt",
+      "project": "electron-builder",
+      "version": "26.15.3",
+      "source": "https://github.com/electron-userland/electron-builder",
+      "license": "MIT",
+      "scope": "build",
+      "sha256": "bed8d0ab3e6031817f775a641ff37313b0f5591bc8ba0ed79b978dafbd4231ce"
+    },
+    {
+      "file": "NSIS-3.0.4.1.txt",
+      "project": "NSIS",
+      "version": "3.0.4.1",
+      "source": "https://nsis.sourceforge.io/License",
+      "license": "Zlib; bzip2; CPL-1.0 modules",
+      "scope": "build-and-portable-launcher",
+      "sha256": "3c8de989f6504d52f5f8dfafedb6668cd47201f5d01f1319570727c091425dd6"
+    },
+    {
+      "file": "7-Zip-toolset-1.0.0.txt",
+      "project": "7-Zip build toolset",
+      "version": "1.0.0 (toolset)",
+      "source": "https://www.7-zip.org/license.txt",
+      "license": "LGPL-2.1-or-later AND other notices",
+      "scope": "build",
+      "sha256": "7b7022cccdee7bddd07f5fd847161e33551cec411e9c9967c14008ee36d5ce3f"
+    },
+    {
+      "file": "7-Zip-LGPL.txt",
+      "project": "7-Zip LGPL terms",
+      "version": "toolset 1.0.0",
+      "source": "https://www.7-zip.org/",
+      "license": "LGPL-2.1-or-later",
+      "scope": "build",
+      "sha256": "1e7e6bae5a5bde32f1ae5a7c37a082d1ab03cf89354f7f936ac40be9e39a6531"
+    },
+    {
+      "file": "SQLCipher-4.12.0.txt",
+      "project": "SQLCipher Community",
+      "version": "4.12.0",
+      "source": "https://raw.githubusercontent.com/sqlcipher/sqlcipher/v4.12.0/LICENSE.md",
+      "license": "BSD-3-Clause",
+      "scope": "runtime",
+      "sha256": "2a2826f6acf46fa650730cf42cbb22a642be33a7ef119c9c4f4bf6daf3bef48e"
+    },
+    {
+      "file": "OpenSSL-3.0.18.txt",
+      "project": "OpenSSL",
+      "version": "3.0.18",
+      "source": "https://raw.githubusercontent.com/openssl/openssl/openssl-3.0.18/LICENSE.txt",
+      "license": "Apache-2.0",
+      "scope": "runtime",
+      "sha256": "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a"
+    },
+    {
+      "file": "StdUtils-LGPL-2.1.txt",
+      "project": "StdUtils",
+      "version": "upstream LGPL text",
+      "source": "https://raw.githubusercontent.com/lordmulder/stdutils/master/LGPL.txt",
+      "license": "LGPL-2.1-or-later",
+      "scope": "portable-launcher",
+      "sha256": "dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551"
+    },
+    {
+      "file": "StdUtils-LGPL-clarification.txt",
+      "project": "StdUtils additional clarification",
+      "version": "upstream",
+      "source": "https://raw.githubusercontent.com/lordmulder/stdutils/master/LGPL_CLARIFICATION.txt",
+      "license": "LGPL-2.1 clarification",
+      "scope": "portable-launcher",
+      "sha256": "49287ffa37d51910a8cb595d7ab64ebd2d42525384b16d4322783a0e57a77194"
+    },
+    {
+      "file": "CC-Switch-MIT.txt",
+      "project": "CC Switch",
+      "version": "upstream notice checked 2026-10-27",
+      "source": "https://raw.githubusercontent.com/farion1231/cc-switch/main/LICENSE",
+      "license": "MIT",
+      "scope": "design-reference-only",
+      "sha256": "912b6a597d10c43b40a0909349ed95b052b17efb6502b4898e1b35dafb896755"
+    }
+  ],
+  "electron_runtime_notices": {
+    "file": "LICENSES.chromium.html",
+    "version": "37.10.3",
+    "sha256": "6965e1b04dc81a012981508299e28542abff2bc7f418071c264f0b53e0c63f34",
+    "source": "https://github.com/electron/electron/releases/tag/v37.10.3"
+  }
+}

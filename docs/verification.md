@@ -1,4 +1,16 @@
-# 当前0.18.1-rel验收
+# 当前0.18.2-rel验收
+
+## 0.18.2-rel MIT与第三方许可补充（2026-10-27）
+
+用户明确选择本项目自有代码采用MIT，新增根LICENSE，package.json及锁文件根元数据同步MIT；第三方保持独立许可。THIRD_PARTY_NOTICES.md按实际构建区分运行组件、构建工具、可选qq-win-db-key/QQDecrypt和CC Switch界面参考，包含作者、来源及原文。取钥助手和文档的自定义非商用许可不被本项目MIT覆盖，也不打进便携包。
+
+核对Electron 37.10.3、CPython 3.14.0、sqlcipher3 0.6.2、SQLCipher 4.12.0、OpenSSL 3.0.18、PyInstaller 6.22.3、electron-builder 26.15.3及NSIS/插件，保存14份许可原文和来源SHA256。sqlcipher3元数据写MIT，但实际原文为zlib风格，两者差异明确保留。320个npm包仅提供锁文件许可元数据清单，不冒充逐个法律审阅或全部运行依赖；Electron完整组件许可仍由原始LICENSES.chromium.html保留。StdUtils的LGPL及作者安装器澄清分别保留，源码链接指向上游项目。
+
+新增“设置 → 许可证与致谢”，专用IPC只打开固定本地说明，忽略渲染侧传入的任意路径。主进程实际调用及打开失败的提示已验证；测试拦截系统打开动作，未启动用户桌面的记事本。predist按原文哈希生成离线资源，包内逐字节复核，独立许可ZIP另包含完整Electron声明。
+
+验证：210项核心、15组桌面、13组界面/主进程、4项编译核心及包内main/preload/core集成通过；现有聊天、记忆、范围和费用逻辑未扩展。本次无收费API测试，也不宣称完成全部历史源码或法律合规审计。证据为build/license-final-core.log、license-final-desktop.log、license-ui-*.log、license-packaged-*.log、license-release-verification.log和license-privacy-check.log。
+
+发布源文件与包内一致，程序自有元数据为MIT；Electron完整声明保留，14份原文在本地及ZIP中逐项校验。便携包SHA256：`b3159a79886631f45def03db92e521c22f4c367b0f19fe816fb71691f2508696`。本地仅保留0.18.2与历史0.18.1及校验；发行页提供便携包、独立许可ZIP和同时涵盖两者的SHA256.txt，网址为https://github.com/awaqwq23/qq-insight-local/releases/tag/v0.18.2-rel。
 
 公开发行核对：使用原0.18.1便携程序和SHA256，不重新编译或改动程序；发行前重跑scripts/verify_release.cjs，核对已通过的核心/桌面/界面/编译与包内记录。仓库未配置远程CI，不把无检查记录当作CI通过。README迁为功能、用途和使用说明；原迭代与开发内容保存在PROMPT.md，检查文档链接与公开附件的内容哈希。发行地址为https://github.com/awaqwq23/qq-insight-local/releases/tag/v0.18.1-rel，实际发布状态及附件以GitHub页面为准；本次无收费API调用。
 

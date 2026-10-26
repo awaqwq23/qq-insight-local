@@ -1,3 +1,10 @@
+# 0.18.2-rel
+
+- 自有代码经用户选择采用MIT；补齐第三方组件、作者、用途和原始许可，保留sqlcipher3元数据与原文差异。
+- 便携包加入14份许可原文、依赖元数据和离线入口，保留Electron完整声明；独立许可ZIP便于单独查阅。
+- qq-win-db-key/QQDecrypt的非商用许可独立保留，助手仍由用户另行准备，不包含在程序中；CC Switch列为界面思路参考。
+- 210核心、15桌面、13界面/主进程、4编译核心与包内集成通过。本次无收费API调用，具体范围见verification.md。
+
 # 0.18.1-rel
 
 公开发行入口：[GitHub Releases](https://github.com/awaqwq23/qq-insight-local/releases/tag/v0.18.1-rel)。附件为Windows x64便携程序与SHA256.txt；源码不含release目录、私人记录或密钥。README面向用户说明功能和使用，开发交接与迭代说明移入[PROMPT.md](../PROMPT.md)。此次仅发布现有已核验程序及整理文档，不增加程序版本或收费模型测试。

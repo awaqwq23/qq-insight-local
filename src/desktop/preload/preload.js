@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('qqInsight', {
   onWorkspaceProgress: listener => {const handler=(_,payload)=>listener(payload);ipcRenderer.on('workspace:progress',handler);return ()=>ipcRenderer.removeListener('workspace:progress',handler);},
   onAIProgress: (listener) => { const handler = (_, payload) => listener(payload); ipcRenderer.on('ai:progress', handler); return () => ipcRenderer.removeListener('ai:progress', handler); },
   openFavoritesFolder: () => ipcRenderer.invoke('media:open-favorites'),
+  openLicenses: () => ipcRenderer.invoke('licenses:open'),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (input) => ipcRenderer.invoke('settings:save', input),
   officialPrices: () => ipcRenderer.invoke('model:pricing'),

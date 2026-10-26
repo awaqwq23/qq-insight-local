@@ -18,6 +18,13 @@ function walk(relative) {
   }
 }
 walk('src/desktop');
+assert.equal(packedPackage.license,'MIT');
+const legal=path.join(root,'release/win-unpacked/resources/legal'),prepared=path.join(root,'build/legal');
+const noticeManifest=JSON.parse(fs.readFileSync(path.join(root,'licenses/manifest.json'),'utf8'));
+const licenseFiles=['LICENSE.txt','THIRD_PARTY_NOTICES.txt','licenses/manifest.json','licenses/dependency-inventory.json',...noticeManifest.files.map(item=>'licenses/'+item.file)];
+for(const name of licenseFiles)assert.deepEqual(fs.readFileSync(path.join(legal,name)),fs.readFileSync(path.join(prepared,name)),name);
+assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'release/win-unpacked/LICENSES.chromium.html'))).digest('hex'),noticeManifest.electron_runtime_notices.sha256);
+assert.deepEqual(fs.readFileSync(path.join(root,'release/win-unpacked/LICENSE.electron.txt')),fs.readFileSync(path.join(root,'licenses/Electron-37.10.3.txt')));
 assert.deepEqual(fs.readFileSync(path.join(root, 'build/core/qq-insight-core.exe')), fs.readFileSync(path.join(root, 'release/win-unpacked/resources/core/qq-insight-core.exe')));
 const name = `QQ-Insight-${sourcePackage.version}-portable.exe`;
 const hash = crypto.createHash('sha256').update(fs.readFileSync(path.join(root, 'release', name))).digest('hex');

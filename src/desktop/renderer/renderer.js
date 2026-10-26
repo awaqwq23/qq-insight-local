@@ -779,6 +779,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   $('#hero-sync').addEventListener('click', syncCurrent);
   $('#scan-sources').addEventListener('click', () => discoverSources());
   $('#sidebar-scan').addEventListener('click', () => discoverSources());
+  $('#open-licenses').addEventListener('click',async()=>{try{await window.qqInsight.openLicenses();}catch(error){toast(errorMessage(error),'error');}});
   $('#save-account').addEventListener('click', saveAccountSettings);
   $('#cancel-decrypt').addEventListener('click', cancelDecrypt);
   let decryptBackdropDown=false;

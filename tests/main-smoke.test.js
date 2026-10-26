@@ -1,8 +1,10 @@
 ﻿// Actual main/preload/renderer/core integration with an isolated synthetic app directory.
-const { app, BrowserWindow }=require('electron');
+const { app, BrowserWindow, shell }=require('electron');
 const {spawnSync}=require('node:child_process');
 const fs=require('node:fs');const os=require('node:os');const path=require('node:path');const assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..');const folder=fs.mkdtempSync(path.join(os.tmpdir(),'qq-main-smoke-'));
+const licensePaths=[];let licenseError='';
+shell.openPath=async file=>{licensePaths.push(file);return licenseError;};
 app.setPath('userData',folder);app.getAppPath=()=>root;
 const python=process.env.QQ_INSIGHT_PYTHON||'py';
 const seeded=spawnSync(python,[...(/^py(?:\.exe)?$/i.test(path.basename(python))?['-3.14']:[]),path.join(__dirname,'ai-fixture.py'),path.join(folder,'data'),'--recent-ai'],{windowsHide:true,encoding:'utf8'});
@@ -15,6 +17,7 @@ app.on('browser-window-created',(_,win)=>{
    const result=await win.webContents.executeJavaScript(`(async()=>{
     for(let i=0;i<100&&!state.settings;i++)await new Promise(r=>setTimeout(r,30));
     const health=await window.qqInsight.rpc('system.health');
+    const licensesOpened=(await window.qqInsight.openLicenses({path:'not-an-authorized-file'})).opened;
     state.settings.activeAccountId='synthetic';state.settings.activePlatform='qq';
     const conversations=await window.qqInsight.rpc('conversation.list',{account_id:'synthetic',platform:'qq'});
     state.conversations=conversations.items;
@@ -56,7 +59,7 @@ app.on('browser-window-created',(_,win)=>{
     const self=await window.qqInsight.rpc('self.get',{account_id:'synthetic'});
     const scopedChat=bound.session.conversation_id==='synthetic-group'&&$('#workspace-agent-view').classList.contains('active')&&$('#chat-memory-dialog').open&&chatSettings.settings.prompt==='合成会话设定'&&typeof coverage.unread==='number'&&self.identity==='合成学生身份';
     closeChatMemory();
-    return {recentOpened,outputSaved,linkedOutput,scopedChat,version:health.version,role,compression:defaults.compression,outputChars:defaults.output_chars,features:groupAI.catalog.length,blocked,scope:groupAI.conversation.id,privateBlocked,ledgerEmpty:ledger.items.length===0,mediaForms:document.querySelectorAll('[data-media-form]').length,pricingKeys:Object.keys(prices),savedMaximum,dailyBudget:savedBudget.daily_tokens,outputBudget:savedBudget.output_tokens,chatSaved:chats.items.some(c=>c.id===chat.id)&&chatDetail.session.title==='独立保存的合成对话'&&chatDetail.items.length===0,chatPrivateBlocked};
+    return {licensesOpened,recentOpened,outputSaved,linkedOutput,scopedChat,version:health.version,role,compression:defaults.compression,outputChars:defaults.output_chars,features:groupAI.catalog.length,blocked,scope:groupAI.conversation.id,privateBlocked,ledgerEmpty:ledger.items.length===0,mediaForms:document.querySelectorAll('[data-media-form]').length,pricingKeys:Object.keys(prices),savedMaximum,dailyBudget:savedBudget.daily_tokens,outputBudget:savedBudget.output_tokens,chatSaved:chats.items.some(c=>c.id===chat.id)&&chatDetail.session.title==='独立保存的合成对话'&&chatDetail.items.length===0,chatPrivateBlocked};
    })()`);
    assert.equal(result.version,JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version);assert.equal(result.features,8);assert.equal(result.role,'第一组组长');assert.equal(result.scope,'synthetic-group');assert.equal(result.blocked,true);
    assert.equal(result.privateBlocked,11);assert.equal(result.ledgerEmpty,true);assert.equal(result.mediaForms,2);assert.deepEqual(result.pricingKeys,['text','vision','speech']);
@@ -64,6 +67,11 @@ app.on('browser-window-created',(_,win)=>{
    assert.equal(result.outputSaved,true);assert.equal(result.linkedOutput,131072);
    assert.equal(result.compression,'strong');assert.equal(result.outputChars,1234);
    assert.equal(result.scopedChat,true);assert.equal(result.chatSaved,true);assert.equal(result.chatPrivateBlocked,true);assert.equal(result.recentOpened,true);
+   assert.equal(result.licensesOpened,true);assert.equal(licensePaths.length,1);
+   const notice=process.env.QQ_TEST_PACKAGED==='1'?path.join(process.resourcesPath,'legal','THIRD_PARTY_NOTICES.txt'):path.join(root,'THIRD_PARTY_NOTICES.md');
+   assert.equal(licensePaths[0],notice);assert.match(fs.readFileSync(notice,'utf8'),/SQLCipher.*Community/);
+   licenseError='synthetic license open failure';
+   assert.match(await win.webContents.executeJavaScript(`window.qqInsight.openLicenses().then(()=>'',error=>error.message)`),/synthetic license open failure/);
    console.log('Actual main/preload/core integration passed: startup, group role, paged history, seven prompts and private RPC boundary.');
   }catch(error){console.error(error);process.exitCode=1;}finally{clearTimeout(deadline);app.quit();if(process.exitCode)app.exit(process.exitCode);}
  });

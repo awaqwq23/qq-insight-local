@@ -1,10 +1,10 @@
 {
   "name": "qq-insight-local",
-  "version": "0.18.1-rel",
+  "version": "0.18.2-rel",
   "description": "本地优先的 QQ 聊天快照分析工具",
   "main": "src/desktop/main/main.js",
-  "author": "Local test build",
-  "license": "UNLICENSED",
+  "author": "awaqwq23 and contributors",
+  "license": "MIT",
   "scripts": {
     "start": "electron .",
     "postdist": "powershell -NoProfile -File scripts/prune_releases.ps1",
@@ -24,7 +24,8 @@
     "test:budget-ui": "electron tests/renderer-budget.test.js",
     "test:model-limits": "node tests/model-limits.test.js",
     "test:capacity-ui": "electron tests/renderer-capacity.test.js",
-    "test:pricing": "node tests/official-pricing.test.js"
+    "test:pricing": "node tests/official-pricing.test.js",
+    "predist": "node scripts/prepare-license-bundle.cjs"
   },
   "devDependencies": {
     "electron": "^37.2.5",
@@ -45,6 +46,10 @@
       {
         "from": "build/core/qq-insight-core.exe",
         "to": "core/qq-insight-core.exe"
+      },
+      {
+        "from": "build/legal",
+        "to": "legal"
       }
     ],
     "win": {

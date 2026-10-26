@@ -144,6 +144,12 @@ app.whenReady().then(async () => {
   registerDatabaseTransfer({ ipcMain, dialog, window: () => mainWindow, rpc, settings: () => settingsStore,
     getOperation: () => activeSourceOperation, setOperation: value => { activeSourceOperation = value; }, ipcSafe });
   registerRosterExport({ ipcMain, dialog, window: () => mainWindow, rpc, ipcSafe, BrowserWindow });
+  ipcMain.handle('licenses:open',ipcSafe(async()=>{
+    const file=app.isPackaged?path.join(process.resourcesPath,'legal','THIRD_PARTY_NOTICES.txt'):path.join(app.getAppPath(),'THIRD_PARTY_NOTICES.md');
+    if(!fs.existsSync(file))throw new Error('许可文件缺失，请重新下载完整发行包。');
+    const error=await shell.openPath(file);if(error)throw new Error('无法打开许可说明：'+error);
+    return {opened:true};
+  }));
   ipcMain.handle('media:open-favorites', ipcSafe(async () => {
     const directory = path.join(app.getPath('userData'), 'data', 'favorites', 'media');
     require('node:fs').mkdirSync(directory, { recursive: true });

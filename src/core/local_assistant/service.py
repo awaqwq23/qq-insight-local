@@ -99,7 +99,7 @@ class AssistantService(WorkspaceFeatures):
             messages = conn.execute("SELECT count(*) FROM messages").fetchone()[0]
         return {
             "name": "QQ Insight local core",
-            "version": "0.18.1-rel",
+            "version": "0.18.2-rel",
             "mode": "offline_rules_only",
             "message_count": messages,
             "capabilities": {"qq": True, "wechat": False, "sqlcipher": self.qq_sources.can_decrypt},

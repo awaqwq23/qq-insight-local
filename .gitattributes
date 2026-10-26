@@ -1,0 +1,2 @@
+# Preserve upstream notice bytes and their recorded hashes, including original whitespace.
+licenses/** -text -whitespace
