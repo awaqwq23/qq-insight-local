@@ -1,5 +1,7 @@
 # 0.18.1-rel
 
+公开发行入口：[GitHub Releases](https://github.com/awaqwq23/qq-insight-local/releases/tag/v0.18.1-rel)。附件为Windows x64便携程序与SHA256.txt；源码不含release目录、私人记录或密钥。README面向用户说明功能和使用，开发交接与迭代说明移入[PROMPT.md](../PROMPT.md)。此次仅发布现有已核验程序及整理文档，不增加程序版本或收费模型测试。
+
 - 新增左侧“历史记录”，汇总群聊、私聊和全局AI主题及旧分析存档，按更新时间分页，点击打开准确的原对话。
 - 聊天左栏由466px收紧至292px，主题列表按需展开；正文/输入16px微软雅黑，缩减多余留白，增加实际阅读空间。
 - 210核心、15桌面、13界面/主进程与编译/包内验证见docs/verification.md。本次不调用收费API，原对话、分支和文件保留。
